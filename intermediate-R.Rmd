@@ -22,6 +22,7 @@ output:
 
 
 ```{r setup, include=FALSE}
+# first code comment
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
