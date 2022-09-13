@@ -31,10 +31,11 @@ p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,str
 # purrr {.tabset}
 
 Purrr is a set of tools for working with functions. This training provides an introduction to using the purrr package. It has an R/Rmarkdown slant, and is based on examples drawn from health and care. It is part of a wider training programme designed as next steps for R users who have moved beyond introductory training. This programme covers:
-+ Iteration
-+ Functions
-+ Tidyselect
-+ Dplyr
+
++ iteration
++ functions
++ tidyselect
++ dplyr
 
 This purrr training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=[purrr training]) with any queries, comments, or suggestions.
 
@@ -347,7 +348,7 @@ files %>%
 
 `walk()` is used in exactly the same way as `map()`, but gives a different result. While `map()` and variants return something (like a vector or tibble), `walk()` just returns *any side effects of the code that you run as part of your function*. That makes `walk()` especially useful when drawing graphs, and when writing Rmarkdown. To demonstrate, we'll use a slightly more complicated function, which draws a graph with appropriate headers for organisations in the ae_attendance data matching a set of admissions and breaches conditions:
 
-```{r}
+```{r fig.height=2, fig.width=6}
 
 admission_graphs <- function(org_code_arg) {
   
@@ -357,7 +358,7 @@ admission_graphs <- function(org_code_arg) {
   
     } else{
   
-      cat(glue("  \n  \n### Results for {org_code_arg}  \n"))
+      cat(glue("  \n  \n### Results for {org_code_arg}  \n  \n"))
   
   print(ae_attendances %>% 
     filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}}) %>%
@@ -372,7 +373,6 @@ admission_graphs <- function(org_code_arg) {
     }
 }
 
-admission_graphs("RJ2")
 ```
 
 We'll pause here to review this code, because it's useful to have a very clear idea of how a function works before we start to use it with `purrr()`. The function:
@@ -391,13 +391,13 @@ admission_graphs("NLO10")
 
 Now we'll look at the alternative:
 
-```{r}
+```{r fig.height=2, fig.width=6}
 admission_graphs("RJ2")
 ```
 
-So `admission_graphs()` prints a graph with appropriate Rmarkdown headers if there is data that meets our admissions and breaches conditions, but otherwise just tells us that there is no matching data. This means that we can use `walk()` to generate sections of reports (like this one) from vectors. Just to illustrate, we that we've been using above:
+So `admission_graphs()` prints a graph with appropriate Rmarkdown headers if there is data that meets our admissions and breaches conditions, but otherwise just tells us that there is no matching data. This means that we can use `walk()` to generate sections of reports (like this one) from vectors. Just to illustrate using the short vector of organisations we that we used above:
 
-```{r}
+```{r fig.height=2, fig.width=6}
 walk(short_org_codes, admission_graphs)
 ```
 
@@ -471,8 +471,9 @@ list.files("./data/sign_up_2", full.names = T) %>%
 
 
 ## `walk2()`
-Say we now want to use the same 
-```{r fig.height=2, fig.width=6}
+Say we now want to use the our `admission_graphs` function again. However, this time, we want to be able to vary the number of breaches that we filter our data on - perhaps we're not quite sure exactly where the most meaningful cut-off point is, and so we'll explore our data by building a new two-argument function.
+
+```{r}
 
 admission_graphs_breaches <- function(org_code_arg, breach_count) {
   
@@ -496,6 +497,16 @@ admission_graphs_breaches <- function(org_code_arg, breach_count) {
   cat('  \n  \n')
     }
 }
+```
+We haven't made an enormous number of changes to the function. All that we've added is a bit of extra code (largely inside {{double curly brackets}}) to allow us to pass the `breach_count` argument to the appropriate places in the code. And we can still run the function in single cases:
+
+```{r fig.height=2, fig.width=6}
+admission_graphs_breaches("R1H", 75)
+```
+
+But now we can vary the cut-off point for our breaches to explore the data in a new way:
+
+```{r fig.height=2, fig.width=6}
 
 walk2(.x="R1H", .y=c(10,20,50,100,150),admission_graphs_breaches )
 
@@ -504,3 +515,6 @@ walk2(.x="R1H", .y=c(10,20,50,100,150),admission_graphs_breaches )
 ## Resources
 
 + [`purrr()` cheat sheet](https://github.com/rstudio/cheatsheets/blob/main/purrr.pdf)
++ [R4DS chapter on iteration](https://r4ds.had.co.nz/iteration.html) gives a useful overview, and compare-and-contrast with for loops and other similar techniques
++ the [purrr reference manual](https://purrr.tidyverse.org/reference/index.html) is, as you might expect, a mile deep, but it's generally very clearly written and informative
++ if you're interested in exploring the purrr family much more thoroughly, the [functionals chapter in *Advanced R*](https://adv-r.hadley.nz/functionals.html) is highly recommended. Not an easy read, at all, but extremely clear and with lots of very helpful exercises and explanation.
