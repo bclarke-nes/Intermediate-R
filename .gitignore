@@ -1,4 +1,6 @@
 *.html
+*.pdf
+/archive
 
 # History files
 .Rhistory

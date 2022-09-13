@@ -1,0 +1,660 @@
+---
+title: "![](img/header.png) Intermediate R"
+author: "Brendan Clarke"
+date: "`r Sys.Date()`"
+always_allow_html: true
+output:
+  html_document:
+    toc: no
+    toc_depth: 2
+    number_sections: no
+    toc_float:
+      collapsed: no
+  word_document:
+    toc: yes
+    toc_depth: '2'
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+    pandoc_args: ["--extract-media", "."]
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r echo=F, warning=F, message=F}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'asis')
+install.packages(setdiff("pacman", rownames(installed.packages())))
+library("pacman")
+p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang,glue)
+
+```
+
+# Functions {.tabset}
+
+**Current status**
+
+Drafted, needs a good restructure - all the elements are here, but not yet in the right order
+
+----
+
+Writing R as a beginner is largely about learning which functions do which jobs. In this training, we'll learn how to write our own functions. This is important, because turning your code into functions is one useful way of keeping your code comprehensible (to others, and to yourself).
+
+## Introduction
+
+If you haven't glanced at it before, the book *R for Data Science (R4DS)* comes highly recommended. And we'll follow lots of the advice given in the [R4DS chapter on functions](https://r4ds.had.co.nz/functions.html) here. The authors of that chapter advise readers to consider writing a function whenever you repeat a section of code more than twice. The rationale for this advice is that repeating code makes that code more complicated, and harder to work with when we want to, for example, rework our analysis.
+
+As beginners, we often end up writing complicated code. Say we write a block of code to draw a graph showing A&E waiting time breaches from one of the organisations in the `ae_attendances` data set:
+
+```{r fig.height=1.2, fig.width=3}
+ae_attendances %>%
+  filter(org_code == "RF4" & type == "1") %>%
+  ggplot() +
+  geom_col(aes(x=period, y=breaches)) +
+  labs(title="RF4 breaches by month") + xlab("") + ylab("") +
+  theme(axis.ticks.y = element_blank())
+```
+
+There's no reason to turn this code into a function if we want to use it once or twice. But if we need to repeat it more than once, we should be thinking about making the code into a function. That way we could draw the same graph many times (once each for the `r length(unique(ae_attendances$org_code))` orgs in this data, perhaps).
+
+Imagine that we've ignored the advice, and have copy/pasted the code a couple of times, updating both the `labs()` and the `filter()` calls:
+
+```{r fig.height=1.2, fig.width=3}
+ae_attendances %>%
+  filter(org_code == "RJF" & type == "1") %>%
+  ggplot() +
+  geom_col(aes(x=period, y=breaches)) +
+  labs(title="RJF breaches by month") + xlab("") + ylab("") +
+  theme(axis.ticks.y = element_blank())
+```
+
+```{r fig.height=1.2, fig.width=3}
+ae_attendances %>%
+  filter(org_code == "RBN" & type == "1") %>%
+  ggplot() +
+  geom_col(aes(x=period, y=breaches)) +
+  labs(title="RBN breaches by month") + xlab("") + ylab("") +
+  theme(axis.ticks.y = element_blank())
+```
+
+```{r fig.height=1.2, fig.width=3}
+ae_attendances %>%
+  filter(org_code == "RTR" & type == "1") %>%
+  ggplot() +
+  geom_col(aes(x=period, y=breaches)) +
+  labs(title="RTR breaches by month") + xlab("") + ylab("") +
+  theme(axis.ticks.y = element_blank())
+```
+
+This gives us a good framework for thinking about the problems of repeated code. First, this section is now quite long, and a bit unwieldy. If we didn't need to repeat these sections of code, we could shorten and simplify it. And the shorter and simpler the code, the easier it is to understand.
+
+The second problem of repeating code is this: imagine that you realise that a tweak is needed. Perhaps you need to colour the bars using your corporate colours. Easy enough to go back and change one or two instances, but a serious pain if you have many instances to update.
+
+The third problem: imagine that we now need to add an extra set of graphs that show the attendance data for the same organisations. That long block of code would essentially repeat this one - but swapping the word "breaches" for the word "attendances".
+
+We can solve all these problems by turning the code into a function. As the [R4DS chapter on functions](https://r4ds.had.co.nz/functions.html) puts it, the advantages of functions are:
+
++ functions have names, so they make code easier to read and understand
++ they allow you to make changes to your code in one place only
++ they make updating code easier, because they are self-contained (so you don't need to update variable names across your whole script when they chang)
+
+If we turn this code into a function - which you'll be able to do by the end of this training - we can re-use our code much more efficiently. If you compare the original code with the function, you can see that we'll only need to make a few changes to morph our code into a function:
+
+```{r fig.height=1.2, fig.width=3}
+# as a function
+
+ae_spark <- function(org, var) { # new code
+  var <- sym(var) # turn the string containing the variable into a symbol so that we can use it inside aes()
+
+  ae_attendances %>% # same
+    filter(org_code == org & type == "1") %>% # replaced "RF4" with the org argument 
+    ggplot() + # same
+    geom_col(aes(x=period, y=!!var)) + # the !! unquotes the var symbol so that aes() recognises it
+    labs(title=glue("{org} {var} by month")) + xlab("") + ylab("") +
+    theme(axis.ticks.y = element_blank()) # using glue() to paste together the org and var to print the title
+}
+
+ae_spark("RBN", "breaches")
+ae_spark("RTR", "attendances")
+#tinytex::install_tinytex()
+```
+
+The most complicated parts of this is getting everything inside the function into the right format. There's some guidance on this in the final section of the training. For now, let's not worry too much about the details of this slightly complicated function. We'll start in a much more simple way.
+
+## A first function
+
+Here's a simple function: 
+
+```{r}
+my_fun <- function(user_name) {
+  cat(glue("Hello {user_name}, welcome to the wonderful world of functions  \n"))
+}
+```
+
+We'll explain how it works properly in the next section, but for now let's just see what we get when we call it:
+
+```{r}
+my_fun("Susan")
+```
+
+### Exercise
+Try calling the `my_fun()` function yourself below. Start by changing the name (in the brackets). What happens if you supply something other than a name? What happens if you supply more than one name using `c()`?
+
+```{r}
+# call my_fun() here
+```
+
+----
+
+Now let's try something else. Let's re-work our function so that it prints a different message. I've supplied the existing code below. A quick word of explanation in case you haven't done much with with Rmarkdown before:
+
++ we use `cat()` to pass unformatted text from R to Rmarkdown
++ Inside that call to `cat()` we have a simple call to `glue()`, which allows us to take R variables - like `user_name` and paste them into strings of text
++ Finally, the `  \n` tells Rmarkdown to make a new line, so that each message the function generates will appear on a new line. 
+
+Note the **two** spaces before the `\n` - these are absolutely necessary to make the new line (and personally a major bugbear when troubleshooting Rmarkdown output).
+
+### Exercise
+
+```{r}
+# change the message that my_fun() prints - keep it as clean as you can, please!
+
+my_fun <- function(user_name) {
+  cat(glue("Hello {user_name}, welcome to the wonderful world of functions  \n"))
+}
+
+my_fun("Susan")
+```
+
+
+## Function syntax
+
+The function manual page found using `?function` is not very illuminating, particularly when you're starting to learn how to write functions. I think that the [R4DS chapter on functions](https://r4ds.had.co.nz/functions.html) that we've already mentioned does a much better job of explaining the building blocks of functions in R. These are:
+
+1. A memorable name, to make it easy to understand what a function that you're using does
+2. Some arguments, which you pass to the function (like "Susan" at the end of the code block above)
+3. A body, which contains the code that does the work of the function
+
+We'll work through three exercises now to reinforce those elements.
+
+### Exercise (name)
+
+`my_fun()` is not a good function name. Let's spend 2 minutes brainstorming some better names, and then you should re-write the function below with a more useful name. Some pointers for good names:
+
++ they should be verbs explaining what the function does
++ they should be short, to prevent you regretting your life choices when typing them
++ use snake_case or camelCase to facilitate reading (otherwise you'll be peering at `aeattendancegraphmakerwithorgandvaroptions("RF4")` in a few months trying to make sense of what it means)
+
+
+```{r}
+# re-write your renamed function here
+
+
+# test it by calling it here, then re-knitting the doc
+
+```
+
+### Exercise (arguments)
+
+Now let's think about arguments. We've got one argument already in our function. Can you update it to add a second argument - `job_title` - so that our function now includes the `user_name`'s job in the greeting? I've included the original `my_fun()` below - feel free to change the name to your preferred version too.
+
+```{r}
+# add a second argument inside the function() - separated by a comma from the existing first argument
+my_fun <- function(user_name) {
+  cat(glue("Hello {user_name}, welcome to the wonderful world of functions  \n"))
+}
+
+# test your function with a second argument - remember to update the arguments
+my_fun("Susan")
+```
+
+### Exercise (body)
+
+Finally, let's do something a bit more interesting in the body of our function. Here's a little bit of code that takes a user name and job title, then counts letters and vowels in the user name, then outputs a little message containing the name, job title, and counts of letters and vowels:
+
+```{r eval=F}
+user_name <- c("Albertine D. Marmot")
+job_title <- c("Data analyst")
+name_chars <- nchar(user_name)
+name_vowels <- nchar(gsub("[^aeiou]", "", user_name))
+cat(glue("Hello {user_name} the {job_title}. Welcome to the KIND Learning Network R training session on functions. Through the power of this function, I'm delighted to report that your name has {name_chars} letters, of which {name_vowels} are vowels. Welcome to the wonderful world of functions  \n"))
+```
+
+
+In this exercise, you'll:
+
+1. Copy/paste your updated function from the code block in the previous exercise
+2. Rename the function to something more suitable
+3. Update the function using the new code above
+4. Test it by calling it with a couple of different user names
+
+```{r}
+
+# write your updated function here
+
+# test your function below
+
+```
+
+
+## Simple functions
+We've already been playing around with a simple function. Now that we've spent some time thinking about function syntax, let's have a more detailed look at how our function works.
+
+```{r}
+my_fun <- function(user_name) {
+  cat(paste0("Hello ", user_name, ", welcome to the wonderful world of functions"))
+}
+```
+
++ `my_fun` = function name
++ `function()` = the function that (confusing!) makes functions for us
++ `user_name` = the single argument that we pass to the function
++ `cat(paste0("Hello ", user_name...` = the contents of our function
+
+When we want to use the function, we write the following function call:
+```{r}
+my_fun("Susan")
+```
+
++ `my_fun("Susan")` = the call to the function that prints the result in the Rmarkdown (or console)
+
+Note that this isn't quite the simplest possible function. There's no reason at all that we might not use a 0-argument function - say, if we want to repeat a section of code efficiently. For example, say we want to put the range of some variable in our Rmarkdown text inline. This gets messy if we have more than a couple of lines of code to include, so we might wrap up the code in a function, and then call that in the Rmarkdown.
+
+```{r}
+range_o_matic <- function() {
+  ae_attendances %>%
+  pull(admissions) %>%
+  range()
+}
+```
+So when we want to print our range (which goes from `r range_o_matic()[[1]]` to `r as.integer(range_o_matic()[[2]])`) we don't need to put all that dplyr inline, which helps keep your code clean and organised. And we can now quickly print the range of the admissions variable that we have in our data, which is useful enough. 
+
+### Exercise
+
+Let's now tweak `range_o_matic()`. At the moment this gives us the range of the `admissions` variable. Can you tweak the function so that it gives us the range of the `attendances` variable instead? I'll start you off with the existing code.
+
+```{r}
+range_o_matic <- function() {
+  ae_attendances %>%
+  pull(admissions) %>%
+  range()
+}
+```
+
+Once you've finished updating the function itself, make sure that you test it!
+
+Okay, so I hope I've show you that even 0-argument functions can be potentially useful. However, being able to add arguments allows us to apply functions to different aspects of our analysis without having to re-write the code each time, as we did above. Ideally, we'd like to be able to apply `range_o_matic()` to *any* variable in *any* data series. We'll return to this in the section after next. Next, we'll start explaining how to translate our own code into functions by adding arguments.
+
+## Translating code into functions
+
+Let's imagine that we have a repeated bit of analysis that we want to do. Say we are interested in finding out how much some value varies. We decide that we'll look at the total difference from the average as a way of doing this. We want to be able to do this analysis on several different ranges of data.
+
+We can do this by writing a function that:
+
++ takes as an argument a vector of numbers
++ finds their mean
++ then finds the absolute difference of each number from the mean
++ finally, it returns the sum of all the differences from this mean
+
+We could write some code like this:
+
+```{r}
+raw_data <- c(2,7,6,4,5,8,6,3,4,5,6) # our numbers
+mean_raw_data <- mean(raw_data)   # the mean of all the numbers
+sum(abs(raw_data - mean_raw_data))  # find the sum of differences from mean
+```
+
+We could then re-use this code by assigning some different numbers to the vector `raw_results`:
+
+```{r}
+raw_data <- c(3,11,8,4,7,5,2,9,6,3,45,2) # our numbers
+mean_raw_data <- mean(raw_data)   # the mean of all the numbers
+sum(abs(raw_data - mean_raw_data))  # find the sum of differences from mean
+```
+
+But reusing this code each time quickly gets complicated, particularly if you need to tweak the code as your code develops. Just to illustrate, while writing this I've just had to change two of the variable names in the two code blocks above, and it took me a solid couple of attempts before everything worked properly again. Let's avoid that kind of messing around if we can. As R4DS puts it, to keep things clean and simple, we should avoid copy/pasting code more than twice. The good news is that we can easily turn this code into a function together. Let's call this function `diff_sum()`. I'll work through this process below, and then you can have a go at translating some code above into a working function.
+
+The first job is to set up the function syntax. This is really simple:
+
+```{r}
+diff_sum <- function() {
+  
+}
+```
+
+You can see that we've copy/pasted the working code above into the body of the function. Note that this won't run properly at present - because the data is hard-coded into the function, it'll always return the same output:
+
+```{r}
+diff_sum <- function() {
+
+  raw_data <- c(3,11,8,4,7,5,2,9,6,3,45,2) # our numbers
+  mean_raw_data <- mean(raw_data)   # the mean of all the numbers
+  sum(abs(raw_data - mean_raw_data))  # find the sum of differences from mean
+
+  }
+```
+
+So now we'll make a few changes to allow us to pass different data to the function. First, I'll remove the line where we assign some numbers into the `raw_data` variable. I'll also add an argument - `data` to the first line.
+
+```{r}
+diff_sum <- function(data) {
+
+  mean_raw_data <- mean(raw_data)   # the mean of all the numbers
+  sum(abs(raw_data - mean_raw_data))  # find the sum of differences from mean
+
+}
+```
+
+This won't run properly either, because at the moment the `data` argument doesn't get used in the calculation in the function. So we'll need to update the variable names inside the body of the function:
+
+```{r}
+diff_sum <- function(data) {
+
+  mean_raw_data <- mean(data)   # the mean of all the numbers
+  sum(abs(data - mean_raw_data))  # find the sum of differences from mean
+
+}
+
+diff_sum(c(8,4,1,11,7,5,-17,12,-4,2,9,6,3,45,2))
+```
+
+### Exercise
+
+So, we'll conclude with an exercise. Can you build your own function along the lines of `diff_sum`? I'll start you off with some working code:
+
+```{r}
+number <- 5
+number * number
+
+# write your function here
+
+```
+
+A suggestion for approaching this exercise:
+
++ start with the bare-bones of the function
++ copy all the code inside the function
++ review the code, so that instead of `number` being hard-coded, we instead use an argument to pass the number to the function
++ test your working function with a selection of numbers
+
+
+## More complicated functions
+
+So far, we've only used very simple code as the body of our functions. We're going to make things a bit more complicated here. The reason for doing this is that often we want to use functions to avoid repeating a complicated piece of code, so beginners often want to start working on fairly intricate bits of code right away. There are a couple of pain-points as our code develops, so we'll look at some useful tools for avoiding these difficulties.
+
+### Indirection
+
+Back to `range-o-matic()`. We wanted to adapt this so that we could supply it with any variable in any data set, and have it return the range. Let's have a go at doing that:
+
+```{r eval=F}
+range_o_matic <- function(data, var) {
+  data %>%
+  pull(var) %>%
+  range()
+}
+
+range_o_matic(ae_attendances, attendances)
+```
+
+Unfortunately, this doesn't work, and R produces an error telling us that `object 'attendances' not found`. Why is this?
+
+The short answer is that `pull()` doesn't know what we're referring to when we ask it to produce `attendances`. One of the major advantages of many of the tidyverse functions is that they simplify the business of referring to our data. So if we're doing something in a tidyverse way, we usually start with a call to a tibble:
+
+```{r eval=F}
+ae_attendances %>%
+  ...
+```
+In what follows, because of the way that the pipe works, we can just specify columns in that tibble without explicitly specifying that they are part of that tibble. For instance, in the following `select()` call, we just write `attendances`:
+
+```{r eval=F}
+ae_attendances %>%
+  select(attendances)
+```
+
+Compare and contrast the base-R way of doing something similar, which would be:
+
+```{r eval=F}
+ae_attendances$attendances
+```
+Here, the `$` is the link between the tibble and the column. Not having to explictly specify the data each time is usually a tremendous advantage. When it comes to functions, though, it's a bit more tricky.
+
+<!-- Link to programming with dplyr -->
+
+```{r eval=F}
+range_o_matic <- function(data, var) {
+  data %>%
+  pull({{var}}) %>%
+  range()
+}
+
+range_o_matic(ae_attendances, attendances)
+range_o_matic(LOS_model, Age)
+LOS_model
+```
+
+```{r}
+
+# example of wrapping slightly complicated code for re-use
+my_fun <- function() {
+  ae_attendances %>% 
+    filter(admissions < 5 & breaches >= 400 & org_code == "RJ2") %>%
+    group_by(year = year(period), month = month(period)) %>%
+    arrange(year, month) %>%
+    ggplot() +
+    geom_col(aes(x=period, y=attendances)) +
+    labs(title="RJ2 admissions for months with < 5 admissions and > 400 breaches")
+}
+
+my_fun()
+```
+
+
+This gets complicated [see the *Advanced R* chapter](https://adv-r.hadley.nz/quasiquotation.html) for many more details. Practice is important here - a little bit of trial and error, and a lot of focused searching for help is an excellent way to learn.
+
+## 1-argument functions
+
+Real power comes in passing arguments to your function, so that you can re-use the code with a new analytical target. Let's give `my_fun()` an argument:
+
+```{r}
+# example of single argument passed to function
+my_fun <- function(org_code_arg) {
+  ae_attendances %>% 
+    filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}}) %>%
+    group_by(year = year(period), month = month(period)) %>%
+    arrange(year, month) %>%
+    ggplot() +
+    geom_col(aes(x=period, y=attendances)) +
+    labs(title= "RJ2 admissions for months with < 5 admissions and > 400 breaches") +
+    scale_x_date(limits=ymd("2016-04-01", "2019-03-01"))
+}
+
+my_fun("RJ2")
+
+```
+
+Okay, so that's updated the data but not the title. We can re-use that same argument (with a little bit of creative use of `paste0()`) to give us a more useful title:
+
+```{r}
+# example of single argument passed to function
+my_fun <- function(org_code_arg) {
+  ae_attendances %>% 
+    filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}}) %>%
+    group_by(year = year(period), month = month(period)) %>%
+    arrange(year, month) %>%
+    ggplot() +
+    geom_col(aes(x=period, y=attendances)) +
+    labs(title= paste0(org_code_arg, " admissions for months with < 5 admissions and > 400 breaches")) +
+    scale_x_date(limits=ymd("2016-04-01", "2019-03-01"))
+}
+
+my_fun("RJ2")
+
+```
+
+Changing the title is a useful tweak to our function. Note though that we have some org_codes for which our function is much less useful:
+
+```{r}
+
+my_fun("NLO10")
+
+```
+
+We'll fix that in the next step
+
+## Conditional execution
+
+We want our function to give us a sensible result when we have no matching data for our org_code. We can do this by using if()/ifelse() in our function. As a quick primer, `if()` works as follows:
+
+```{r eval=F}
+if (something){
+  then do this
+} else {
+  do something else
+}
+```
+
+The usual example used to demonstrate `if()` is a simple odd/even checker using `%%`, which returns the remainder of a division. We know that there will be no remainder if we divide an even number by 2:
+
+```{r}
+
+14 %% 2 == 0
+13 %% 2 == 0
+
+```
+
+And so
+
+```{r}
+
+if(14 %% 2 == 0){
+  print("Even")
+} else {
+  print("Odd")
+}
+
+```
+Not a shock that 14 is always even, so let's take what we know about functions to set up a function that will tell is if any number is odd or even:
+
+```{r}
+is_even <- function(n){
+  
+  if(n %% 2 == 0){
+  print("Even")
+} else {
+  print("Odd")
+}
+  
+}
+is_even(14)
+is_even(11)
+is_even(-898543143130)
+
+```
+Okay, interesting enough. But what's much more interesting is that we can be more ambitious than just printing odd or even. Let's see if we can handle our org_code problem more elegantly than just printing an empty graph.
+
+```{r results='asis'}
+my_fun <- function(org_code_arg) {
+  
+  if (nrow(ae_attendances %>% filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}})) == 0) {
+    
+    cat(paste0("No data exists for ", org_code_arg, ".  \n"))
+  
+    } else{
+  
+      cat("  \n  \n### Results for ", org_code_arg, "  \n")
+  
+  print(ae_attendances %>% 
+    filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}}) %>%
+    group_by(year = year(period), month = month(period)) %>%
+    mutate(end = period+days_in_month(month)-1) %>%
+    arrange(year, month) %>%
+    ggplot() +
+    geom_rect(aes(xmin=period, xmax=end, ymin=0, ymax=attendances)) +
+    labs(title= paste0(org_code_arg, " admissions for months with < 5 admissions and > 400 breaches")) +
+    scale_x_date(limits=ymd("2016-04-01", "2019-03-01")) )
+  cat('  \n  \n')
+    }
+}
+
+my_fun("NLO10")
+my_fun("RJ2")
+
+```
+
+## Dot dot dot `(...)`
+<!-- Look at `??tidyselect`` especially *Implementing tidyselect interfaces* -->
+<!-- Just a taster, really - ?/save for special tidyverse functions module -->
+
+<!-- and  -->
+<!-- dyn-dots {rlang} -->
+
+Easier to see than to explain, but roughly:
+
++ `...` lets you pass many arguments between functions
+
+Let's start with a simple, two-argument function:
+
+```{r}
+auto_personaliser <- function(name, org) {
+  cat("Report generated by ", name, " from ", org, " on ", format(Sys.time(), "%d-%b-%Y"), "  \n")
+}
+```
+
+When called, this function generates a bit of Rmarkdown output for us:
+
+```{r}
+auto_personaliser("Steve", "NSS")
+```
+
+Now let's imagine that we want to use that function inside another function. Perhaps we have a standard function that creates a bit of Rmarkdown for us that we want to put in each section of a report:
+
+```{r}
+
+graph_caption <- function() {
+  cat("  \n#### Disclaimer  \nAll rights reserved. Any similarity to actual persons, living or dead, is purely coincidental. Do not attempt to adjust your set.  \n -----  \n")
+}
+```
+
+Again, this produces a bit of Rmarkdown:
+```{r}
+graph_caption()
+```
+
+So, it would be useful to be able to add our `auto_personaliser()` function into our `graph_caption()` functions, so that we could include the personalised attribution as part of the disclaimer:
+
+```{r}
+
+graph_caption <- function() {
+  cat("  \n#### Disclaimer  \nAll rights reserved. Any similarity to actual persons, living or dead, is purely coincidental. Do not attempt to adjust your set.  \n -----  \n")
+  cat(paste0("  \n ", auto_personaliser("Steve", "NSS")))
+}
+
+graph_caption()
+```
+
+While this code works, it's hard to update. Every time we want to update the `auto_personaliser()`, we'll need to re-write the `graph_caption()` function.
+
+This is where dots can help. We can use them to pass the two `auto_personaliser()` arguments *through* `graph_caption()`, like this:
+
+```{r}
+graph_caption <- function(...) {
+  cat("  \n####  \n Disclaimer: All rights reserved. Any similarity to actual persons, living or dead, is purely coincidental. Do not attempt to adjust your set.  \n -----  \n  ")
+  cat(paste0("  \n  ", auto_personaliser(...)))
+}
+
+graph_caption("Susan", "NHS 24")
+```
+
+As a final thought, this is a really strong combination with `purrr()`, which is covered in another training session. `purrr()` allows you to repeat functions over other objects, like tibbles. To illustrate:
+
+```{r}
+authors <- tribble(
+  ~name, ~org,
+  "Steve", "NSS",
+  "Susan", "NHS 24",
+  "Ameet", "NES",
+  "Eilidh", "NHS Highland"
+)
+
+walk2(authors$name, authors$org, graph_caption)
+```
+

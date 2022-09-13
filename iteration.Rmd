@@ -1,0 +1,348 @@
+---
+title: "![](img/header.png) Intermediate R"
+author: "Brendan Clarke"
+date: "`r Sys.Date()`"
+always_allow_html: true
+output:
+  html_document:
+    toc: no
+    toc_depth: 2
+    number_sections: no
+    toc_float:
+      collapsed: no
+  word_document:
+    toc: yes
+    toc_depth: '2'
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+    pandoc_args: ["--extract-media", "."]
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r echo=F}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+install.packages(setdiff("pacman", rownames(installed.packages())))
+library("pacman")
+p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang,glue)
+```
+
+# Iteration {.tabset}
+Norm against using loops in R. Two reasons: performance, and vectorised functions
+
+Imperative programming (for loops) has a place - even if a purist might avoid them. Computer time is usually cheaper than analyst time - and loops definitely have some strengths in real-world analysis, particularly when you need to repeatedly apply a non-vectorised functions - like some of the core Rmarkdown functions. And we'll cover some important tips for avoiding the worst of the performance hit that iteration can cause to your work.
+
+## Introduction
+
+This follows the explanations and code from [R4DS](https://r4ds.had.co.nz/iteration.html#for-loops).
+
+Note most of this uses base R rather than the tidyverse. This might introduce a bit of unfamiliar code, but we'll explain anything new that crops up, and most of the base R code is pretty straightforward. A couple of examples right away. For some tibble called `df`:
+
++ `df[[]]`
+  + `df[["val"]]` selects the column named `val` 
+  + `df[[n]]` selects the nth column from df
++ `df$`
+  + `df$val` selects the column named `val` 
+  + `df$n` selects the nth column from df
+
+`setdiff()` is very helpful to check what you're selecting:
+
+```{r}
+setdiff(synthetic_news_data[["age"]], synthetic_news_data[[2]])
+
+setdiff(synthetic_news_data %>% select(age) %>% pull(), synthetic_news_data[[2]])
+```
+
+## For-loops
+
+Let's begin with a simple example:
+
+```{r}
+
+word <- ""
+
+x <- 1:10
+
+for (i in seq_along(x)) {
+  word[[i]] <- "iteration is"
+}
+
+cat(word)
+```
+
+From the [R4DS chapter](https://r4ds.had.co.nz/iteration.html) which - like the rest of that book - is essential reading, we can identify three parts to this for loop:
+
+1. **Output** - what do you want out of the loop? Here, it's `word`, which is initially empty, but will gradually expand...
+2. **Sequence** - what do you want to loop over? Here, it's `x`, which contains the numbers 1 to 10
+3. **Body** - what do you want the loop to do? Writing the code is easier than explaining it, but the parts here are:
+    + first, we have `for()` which starts the loop
+    + next, inside the `for()` function, we take the first value of `x`, and store it in `i`
+    + we then add the phrase "iteration is" into the `i`th position of the `word` vector
+    + finally, we replace the current value of `i` with the next item in the sequence `x`, and re-run the code above. This goes on until we reach the end of the sequence `x`
+    
+This might be a bit more obvious if we tweak our code to include the value of `i` before each element we add into the `word` vector:
+  
+```{r}
+
+word <- ""
+
+x <- 1:10
+
+for (i in seq_along(x)) {
+  word[[i]] <- glue("iteration {i}")
+}
+
+cat(word)
+```
+
+And there's no reason we need to confine the output of our loop to a vector. We could adapt our loop to produce a simple tibble:
+
+```{r}
+
+words <- tibble(iteration="",contents="")
+
+x <- 1:5
+for (i in seq_along(x)) {
+  words[i, 1] <- as.character(i)
+  words[i, 2] <- glue("iteration {i}")
+}
+words %>%
+  knitr::kable()
+```
+
+### Exercise
+
+```{r}
+#tweak a loop
+```
+
+```{r}
+#write your own loop
+```
+
+## Output
+
+## Sequences
+
+```{r}
+
+# basic sequences
+c(1,2,3,4)
+1:10
+
+# couple of useful built-in sequences
+letters 
+LETTERS
+month.abb
+
+# sequences from tibbles
+# base R
+sort(unique(ae_attendances$org_code))
+
+colnames(ae_attendances)
+
+#tidyverse
+ae_attendances %>%
+  distinct(org_code) %>%
+  pull() %>%
+  sort()
+
+# couple of helper functions for working through sequences
+seq_along(synthetic_news_data) # cycles through the sequence by number
+names(synthetic_news_data) # cycles through the sequence by column name (tibbles / data frames only)
+
+# seq_along() also works with vectors etc
+seq_along(letters)
+
+# best to avoid rownames if at all possible, but there is also rownames(). May be needed if working with odd, transposed, data
+t(synthetic_news_data) %>%
+  rownames()
+
+```
+
+## Body
+
+## Vectorised functions
+
+We should try and use vectorised functions
+
+```{r}
+perd <- function(x) {
+  glue("This value here is {x}")
+}
+
+synthetic_news_data %>%
+  mutate(age = perd(age))
+
+synthetic_news_data %>%
+mutate(age = glue("This value here is {age}"))
+
+```
+
+Those give identical results - inspect code, not much inside `perd()`.
+
+What happens when we try to use this function across everything?
+
+```{r}
+synthetic_news_data %>%
+  mutate(across(everything(), perd))
+```
+
+That works straightforwardly enough. Things get a bit more complicated when we try to add extra arguments to `perd()` though:
+
+```{r}
+perd_v <- function(var_name, x) {
+  glue("This value of {var_name} here is {x}")
+}
+```
+
+We can use dplyr's [context dependent expressions](https://dplyr.tidyverse.org/reference/context.html) here
+
+```{r}
+synthetic_news_data %>%
+  mutate(across(everything(), ~ perd_v(cur_column(),.)))
+```
+
+But, particularly as a beginner, this kind of syntax is hard to write and understand. A simpler option is to use a loop to do this reworking;
+
+```{r}
+output <- synthetic_news_data
+x <- names(output)
+
+for (i in seq_along(x)) {
+  output[[i]] <- perd_v(names(output[i]), output[[i]])
+}
+glimpse(output[1,])
+
+```
+
+## Rmarkdown with loops {.tabset}
+
+### Introduction
+
+One area where loops excel is generating a mixture of R and Rmarkdown. We'll demonstrate an example of this in the next subsection. This loop uses the attendances data from the `ae_attendances` dataset, which looks like this:
+
+```{r}
+ae_attendances %>%
+  slice(1:5) %>%
+  knitr::kable()
+```
+
+The aim here is to demonstrate how to write a loop that performs the same bit of analysis for each of the orgs in the data, and inserts that bit of analysis for one org into a separate Rmarkdown subsection. This is a great way of standardising and organising your report - we write the code once only, and then use the loop to run it over different values of org_code. In a bit more detail, our loop will:
+
++ set up a sequence composed of each of the org_codes in the data
+  + actually, I will cheat here. There are 274 orgs in the dataset, and so we'll just look at a random sample of 10 to avoid making a document that takes an eternity to knit.
++ we'll then loop over that sequence, and for each org code it will:
+  + print an Rmarkdown header in a new subsection tab
+  + print a little bit of explanatory text
+  + print a table summarising the admissions data for that organisation
+  + display a small graph, showing how the total admissions for that organisation compares with the other 273 orgs in the data
+
+Let's look at the example first, with no code, and then we'll work through each of the stages above to explain how all of the parts fit together.
+
+### Example {.tabset}
+```{r loop-ex, echo=F, fig.height=1.5, fig.width=4, results='asis'}
+# worth looking at the chunk headers for the example and explanation. We don't repeat the code in this section, but we just re-use the example chunk with different chunk options to show the code rather than the output. https://bookdown.org/yihui/rmarkdown-cookbook/reuse-chunks.html is a good place to start if this is of interest.
+
+# note that our loop just displays things in our document, so we don't bother to create an output here
+
+# create a vector of sample orgs to simplify the for() call and filter() indirection later on
+orgs_seq <- as.character(sample(ae_attendances %>% 
+                                  distinct(org_code) %>% 
+                                  arrange(org_code) %>% 
+                                  pull(), 10)
+                         ) 
+
+# print a single header message outside the body of the loop telling the reader what to expect
+cat(glue("In this section we present a summary of admissions data, grouped by type of admission, for a sample of {length(orgs_seq)} organisations.  \n")) 
+
+# set up the main body of the loop
+for (i in seq_along(orgs_seq)) {
+  
+    # calculating the total admissions for our org - we use this in the explanatory text, and in the graph
+    org_total_admissions <- ae_attendances %>%
+            filter(org_code == orgs_seq[i]) %>%
+            summarise(sum(attendances)) %>%
+            pull()
+    
+    # customised 4th level header containing org_code
+    cat(paste0("  \n  \n#### ", orgs_seq[i], " attendances  \n"))
+    
+    # customised explanatory text
+    cat(paste0("Some explanatory text: ", orgs_seq[i], " had a total of ", org_total_admissions, " admissions.  \n"))
+    
+    # use kable() to display a summary of the data
+    print(ae_attendances %>%
+      drop_na(org_code) %>%
+      filter(org_code == orgs_seq[i]) %>%
+      group_by(type) %>%
+      summarise(attendances = sum(attendances)) %>%
+      knitr::kable()
+      )
+    
+    cat("  \n") # otherwise the graph won't print - see https://github.com/yihui/knitr/issues/886
+    
+    # histogram of admissions across orgs, for comparison
+    print(ae_attendances %>%
+      group_by(org_code) %>%
+      summarise(attendances = sum(attendances)) %>%
+      ggplot() +
+      geom_histogram(aes(x=attendances), bins=10) +
+      geom_vline(xintercept=org_total_admissions) +
+      xlab("Total admissions") +
+      ylab("n orgs") +
+      geom_label(aes(x=org_total_admissions, y=60), label = paste0(org_total_admissions, " total"), nudge_x = 0.35, size = 3)) + # label showing value of admissions for this org
+      xlim(0,2000000) #little cheat to keep the label from being cut off for very high values
+
+    cat("\n") # absolutely essential - see https://github.com/yihui/knitr/issues/886
+}
+
+```
+
+### Explanation
+```{r, loop-ex, eval=F}
+```
+
+### Exercise
+
+We're going to update the example in this exercise. We want to make the following changes:
+
++ instead of a random sample of org_codes, we want to look at all the orgs where attendances is greater than 800000
++ ...and let's rank our orgs in terms of their total attendances, and use that ranking as the sequence for our loop
++ We'll also display rankings in the explanatory text
++ instead of plotting the total attendance on a histogram, we want to look at the three types of attendance separately
++ we want to be a bit more ambitious with our table. Can we update the table so that we get a percentage rate for each of the types of admission?
+
+Jigsaw puzzle - working code snippets below. We'll work through assembling them into a working loop.
+
+
+```{r fig.height=1.5, fig.width=4, results='asis'}
+orgs <- ae_attendances %>%
+  group_by(org_code) %>%
+  summarise(attendances = sum(attendances)) %>%
+  filter(attendances > 800000) %>%
+  mutate(rank = rank(desc(attendances))) %>%
+  arrange(rank) %>%
+  pull(org_code)
+
+one_org <- ae_attendances %>%
+      group_by(org_code, type) %>%
+      summarise(attendances = sum(attendances)) %>%
+      filter(org_code == "RAS")
+
+one_org %>%
+  mutate(attendances = glue("{attendances} ({100*(round(attendances / sum(attendances), 3))}% of total)")) %>%
+  knitr::kable()
+
+ae_attendances %>%
+      group_by(org_code, type) %>%
+      summarise(attendances = sum(attendances)) %>%
+      ggplot() +
+      geom_histogram(aes(x=attendances, fill=type), bins=10) +
+      geom_vline(data = one_org, aes(xintercept=attendances), color=c("#000099")) +
+      facet_wrap(~type) +
+      xlab("Total admissions") +
+      ylab("n orgs") +
+      theme(legend.position="none", axis.text.x = element_blank(), axis.ticks.x = element_blank())
+```

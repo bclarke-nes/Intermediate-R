@@ -17,360 +17,47 @@ output:
     toc: yes
     toc_depth: '2'
     pandoc_args: ["--extract-media", "."]
+editor_options: 
+  chunk_output_type: console
 ---
 # Intermediate R {.tabset}
+
+<!-- This version basically is feature-creeping itself to death. Might well be better as fully modular - one on functions, one on iteration, one on dplyr, one on purrr -->
 
 ```{r pre-setup, message=FALSE, warning=FALSE, echo=F}
 install.packages(setdiff("pacman", rownames(installed.packages())))
 library("pacman")
-p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets)
+p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr)
 
 # avoiding tidyverse due to memory issues in RStudio Cloud environment 
 ```
+
 ## Introduction
 
-This is an introduction to programming in R
+This is an introduction to programming in R.
 
-Expects you to have basic familiarity with R and Rmarkdown, including Tidyverse.
+Expects you to have basic familiarity with R and Rmarkdown, including Tidyverse. While the expectations are fairly low - you absolutely don't need to be an R expert - you should have some experience using R before enrolling in this training. It also has a tidyverse flavour, so you should be familiar with using those packages (dplyr especially) if most of your experience has been with base R.
 
-Quiz:
+Some self-assessment questions might be useful to calibrate these expectations. Are you able to answer these questions fairly rapidly and with confidence?
 
 - what's a tibble?
 - what function would you use to load a csv file?
-- make a new column in a tibble
-- draw a simple graph using `ggplot()`
+- how would you make a new column in a tibble from some other column(s)?
+- how would you draw a simple graph using `ggplot()`?
 
-Builds on Dynamic Reports in R/Rmarkdown - but suitable for those with some R experience
+If you were able to answer these fluently, then great, this training is meant for you. If they were a bit beyond your previous experience, then you might like to enroll on the KIND Learning Network training *Dynamic Reports in R/Rmarkdown* as a first step.
 
-What we'll cover:
+## What this training will cover
 
-- using `NHSRdatasets`
-- getting the best out of `dplyr`
-- functions
-- iteration
-- functionals, and the `purrr` package
+This is a modular training course split into four 90 minute sections. 
 
-## NHS-R data
+- getting the best out of `dplyr`, including tidyselect, using `NHSRdatasets` as a model system for real-world analysis in R
+- functions, including data indirection for tidyverse functions
+- iteration, including using iteration to generate Rmarkdown
+- the `purrr` package and functionals (functions that make other functions)
 
-Let's look at some data from `NHSRdatasets`:
+You can take any combination of the sessions in any order. They were written together, so there's very little overlap between them.
 
-```{r}
-ae_attendances %>% 
-  slice(1:10) %>%
-  knitr::kable()
 
-lapply(ae_attendances, class)
 
-ae_attendances %>% 
-  group_by(period) %>%
-  tally(breaches) %>%
-  ggplot() +
-  geom_line(aes(x=period, y=n))
-```
 
-## Getting the best out of dplyr
-
-```{r}
-ae_attendances %>% 
-  slice(1:10)
-```
-### group, summarise, count
-
-+ `group` doesn't change how the data looks - just how it behaves:
-+ Each call to `summarise()` removes a layer of grouping
-
-```{r}
-
-ae_attendances %>% 
-  summarise(sum(attendances))
-
-ae_attendances %>% 
-  group_by(org_code) %>%
-  summarise(sum(attendances)) %>%
-  summarise(sum(`sum(attendances)`))
-```
-+ `ungroup()` removes grouping
-
-```{r}
-ae_attendances %>% 
-  summarise(sum(attendances))
-
-ae_attendances %>% 
-  group_by(org_code) %>%
-  summarise(sum(attendances))
-
-ae_attendances %>% 
-  group_by(org_code) %>%
-  ungroup() %>%
-  summarise(sum(attendances))
-```
-
-+ use formulae in summarise
-
-```{r}
-
-ae_attendances %>% 
-  group_by(org_code) %>%
-  summarise(total = sum(attendances)) %>%
-  arrange(desc(total))
-
-ae_attendances %>% 
-  group_by(org_code) %>%
-  summarise(non_admissions = sum(attendances - admissions)) %>%
-  arrange(desc(non_admissions))
-```
-
-
-
-### rowwise
-
-+ `rowwise()` forms groups per row
-
-```{r}
-ae_attendances %>% 
-  rowwise(org_code) %>%
-  summarise(total=sum(c(attendances, breaches, admissions)))
-
-```
-
-## Functions
-
-+ re-use and organise your code
-+ standardise your code
-+ tweak + plan options
-
-### Function syntax{.tabset}
-
-#### Simple functions
-Most basic version, wrapper for repeating code (saves pasting).
-
-```{r}
-my_fun <- function() {
-  print("Hello world")
-}
-
-my_fun()
-
-# example of wrapping slightly complicated code for re-use
-my_fun <- function() {
-  ae_attendances %>% 
-    filter(admissions < 5 & breaches >= 400 & org_code == "RJ2") %>%
-    group_by(year = year(period), month = month(period)) %>%
-    arrange(year, month) %>%
-    ggplot() +
-    geom_col(aes(x=period, y=attendances)) +
-    labs(title="RJ2 admissions for months with < 5 admissions and > 400 breaches")
-}
-
-my_fun()
-```
-
-#### 1-argument functions
-
-Real power comes in passing arguments to your function, so that you can re-use the code with a new analytical target. Let's give `my_fun()` an argument:
-
-```{r}
-# example of single argument passed to function
-my_fun <- function(org_code_arg) {
-  ae_attendances %>% 
-    filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}}) %>%
-    group_by(year = year(period), month = month(period)) %>%
-    arrange(year, month) %>%
-    ggplot() +
-    geom_col(aes(x=period, y=attendances)) +
-    labs(title= "RJ2 admissions for months with < 5 admissions and > 400 breaches") +
-    scale_x_date(limits=ymd("2016-04-01", "2019-03-01"))
-}
-
-my_fun("RJ2")
-
-```
-
-Okay, so that's updated the data but not the title. We can re-use that same argument (with a little bit of creative use of `paste0()`) to give us a more useful title:
-
-```{r}
-# example of single argument passed to function
-my_fun <- function(org_code_arg) {
-  ae_attendances %>% 
-    filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}}) %>%
-    group_by(year = year(period), month = month(period)) %>%
-    arrange(year, month) %>%
-    ggplot() +
-    geom_col(aes(x=period, y=attendances)) +
-    labs(title= paste0(org_code_arg, " admissions for months with < 5 admissions and > 400 breaches")) +
-    scale_x_date(limits=ymd("2016-04-01", "2019-03-01"))
-}
-
-my_fun("RJ2")
-
-```
-
-Changing the title is a useful tweak to our function. Note though that we have some org_codes for which our function is much less useful:
-
-```{r}
-
-my_fun("NLO10")
-
-```
-
-We'll fix that in the next step
-
-#### Conditional execution
-
-We want our function to give us a sensible result when we have no matching data for our org_code. We can do this by using if()/ifelse() in our function. As a quick primer, `if()` works as follows:
-
-```{r eval=F}
-if (something){
-  then do this
-} else {
-  do something else
-}
-```
-
-The usual example used to demonstrate `if()` is a simple odd/even checker using `%%`, which returns the remainder of a division. We know that there will be no remainder if we divide an even number by 2:
-
-```{r}
-
-14 %% 2 == 0
-13 %% 2 == 0
-
-```
-
-And so
-
-```{r}
-
-if(14 %% 2 == 0){
-  print("Even")
-} else {
-  print("Odd")
-}
-
-```
-Not a shock that 14 is always even, so let's take what we know about functions to set up a function that will tell is if any number is odd or even:
-
-```{r}
-is_even <- function(n){
-  
-  if(n %% 2 == 0){
-  print("Even")
-} else {
-  print("Odd")
-}
-  
-}
-is_even(14)
-is_even(11)
-is_even(-898543143130)
-
-```
-Okay, interesting enough. But what's much more interesting is that we can be more ambitious than just printing odd or even. Let's see if we can handle our org_code problem more elegantly that just printing an empty graph.
-
-```{r}
-my_fun <- function(org_code_arg) {
-  
-  if (nrow(ae_attendances %>% filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}})) == 0) {
-    
-    cat("No data exists for", org_code_arg, ".  \n")
-  
-    } else{
-  
-      ae_attendances %>% 
-      filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}}) %>%
-      group_by(year = year(period), month = month(period)) %>%
-      arrange(year, month) %>%
-      ggplot() +
-      geom_col(aes(x=period, y=attendances)) +
-      labs(title= paste0(org_code_arg, " admissions for months with < 5 admissions and > 400 breaches")) +
-      scale_x_date(limits=ymd("2016-04-01", "2019-03-01"))
-    }
-}
-
-my_fun("NLO10")
-my_fun("RJ2")
-```
-
-
-## purrr
-
-### Map
-
-Let's imagine that we now would like to apply our `my_fun()` over all the organisations in our data. Because our function will do something sensible if any org_code doesn't meet the conditions that we set out, all we need is to generate a list of all the org_codes with a bit of dplyr:
-
-```{r}
-org_codes <- ae_attendances %>%
-  distinct(org_code) %>%
-  arrange(org_code)
-
-```
-
-That gives a total of `r nrow(org_codes)` cases. So we could just go through this data, and call our `my_fun()` for each org_code. 
-
-A much more efficient way through all of those would be to use `purrr::map()`. 
-```{r eval=F}
-my_fun("8J094")
-my_fun("AAH")
-...
-```
-
-Looking at the [reference manual](https://purrr.tidyverse.org/reference/map.html), `map()` takes two arguments:
-
-+ .x - a list or vector
-+ .f - a function (or formula)
-
-Let's start by transforming our tibble of org_codes into a character vector:
-
-```{r}
-org_codes %>%
-  pull() %>%
-  as.character()
-```
-
-We can then use `purrr::map()` over that vector with our `my_fun()` to draw graphs for each of the `r nrow(org_codes)` matching org_codes:
-
-```{r}
-purrr::map(org_codes %>% pull() %>% as.character(), my_fun)
-```
-
-
-## Sorted graph {.tabset}
-
-Now fixes the strange column-width problem with `geom_col()`
-
-```{r results='asis', warning=F}
-
-my_fun <- function(org_code_arg) {
-  
-  if (nrow(ae_attendances %>% filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}})) == 0) {
-    
-    break
-  
-    } else{
-  
-      cat("  \n  \n### Results for ", org_code_arg, "  \n")
-  
-  print(ae_attendances %>% 
-    filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}}) %>%
-    group_by(year = year(period), month = month(period)) %>%
-    mutate(end = period+days_in_month(month)-1) %>%
-    arrange(year, month) %>%
-    ggplot() +
-    geom_rect(aes(xmin=period, xmax=end, ymin=0, ymax=attendances)) +
-    labs(title= paste0(org_code_arg, " admissions for months with < 5 admissions and > 400 breaches")) +
-    scale_x_date(limits=ymd("2016-04-01", "2019-03-01")) )
-  cat('  \n  \n')
-}
-}
-
-
-# my_fun("R1H")
-# my_fun("AAH")
-# my_fun("NLO10")
-
-purrr::walk(org_codes %>% pull() %>% as.character(), my_fun)
-
-cat(paste0("No data exists for ", org_codes <- ae_attendances %>% distinct(org_code) %>% arrange(org_code) %>% pull(org_code), ".  \n"))
-
-nempty <- org_codes <- ae_attendances %>% distinct(org_code) %>% arrange(org_code) %>% pull(org_code)
-c(nempty)
-```

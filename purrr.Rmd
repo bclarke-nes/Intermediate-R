@@ -1,0 +1,506 @@
+---
+title: "![](img/header.png) Intermediate R"
+author: "Brendan Clarke"
+date: "`r Sys.Date()`"
+always_allow_html: true
+output:
+  html_document:
+    toc: no
+    toc_depth: 2
+    number_sections: no
+    toc_float:
+      collapsed: no
+  word_document:
+    toc: yes
+    toc_depth: '2'
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+    pandoc_args: ["--extract-media", "."]
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r echo=F, warning=F, message=F}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'asis')
+install.packages(setdiff("pacman", rownames(installed.packages())))
+library("pacman")
+p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang, glue)
+```
+
+# purrr {.tabset}
+
+Purrr is a set of tools for working with functions. This training provides an introduction to using the purrr package. It has an R/Rmarkdown slant, and is based on examples drawn from health and care. It is part of a wider training programme designed as next steps for R users who have moved beyond introductory training. This programme covers:
++ Iteration
++ Functions
++ Tidyselect
++ Dplyr
+
+This purrr training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=[purrr training]) with any queries, comments, or suggestions.
+
+## Introduction
+
+`purrr()` gives us a powerful and standardised way of applying functions to more-or-less any R object that we like, and collecting the results in any format we choose. That power makes `purrr()` daunting, and so this training session has been designed to give you a gentle introduction to `purrr()`.
+
+Let's begin at the beginning. As `purrr()` lets us pass things to functions, we'll need a test function to play with. Don't worry if you've never written a function before - the key idea is that functions are just a way of wrapping up bits of useful code so that they can be reused in your R scripts. We write functions like this:
+
+```{r}
+
+function_name <- function(argument1, argument2) {
+  
+  #some code here, using the two arguments
+  argument1+argument2
+  
+}
+```
+
+Once we've written our own function, we can use it as we would any other R function. We can call it in a code chunk:
+
+```{r results='markup'}
+function_name(8,11)
+```
+
+Or use it in a calculation:
+```{r results='markup'}
+function_name(8,11) * function_name(9,105)
+```
+
+Or print it as an integrated code block in Rmarkdown: `r function_name(8,11)` is the result of our function.
+
+There's potentially quite a lot to think about when turning code into functions (and you're very welcome to sign-up for the KIND Learning Network session on functions if that appeals). We'll keep it comparatively simple here though: we'll start a basic function below to familiarise you with the process a little bit, before we move on to anything more complicated.
+
+Here's our simple function - `non_admissions()`:
+
+```{r}
+non_admissions <- function(single_org_code) {
+  ae_attendances %>%
+    filter(org_code == {{single_org_code}}) %>%
+    group_by(year=floor_date(period, unit="year")) %>%
+    summarise(year=year(year), org_code={{single_org_code}}, non_admissions = sum(attendances-admissions)) %>%
+    unique()
+}
+```
+
+`non_admissions()` is just a bit of `dplyr` that:
+
++ takes the ae_attendances data from the NHSRdatasets package
++ filters it for the supplied org_code
++ then groups the data into years, and summarises the number of non-admissions (so attendances - admissions)
++ finally, returns a tibble with that summary
+
+Calling this function gets us a small tibble with our non-attendance statistic grouped into year ranges:
+
+```{r results='markup'}
+non_admissions("AJN")
+```
+
+This tibble will behave like any other - so we can pipe it to other functions as we would with any other tibble. For instance, we can add `knitr::kable()` to display it nicely:
+
+```{r}
+non_admissions("AJN") %>%
+  knitr::kable()
+```
+
+Here's how `purrr()` is useful. Let's imagine that we now would like to apply our `non_attendance_range()` over all the `r nrow(ae_attendances %>% distinct(org_code))` organisations in our data. We *could* do this manually by calling our `non_attendance_range()` function on each org_code one-by-one: 
+
+```{r eval=F}
+non_admissions("8J094")
+non_admissions("AAH")
+...
+```
+
+And it we want to use the function a couple of times, hand-coding like this is probably the right approach. However, if we're using the function programmatically - so in this case generating graphs for each of the orgs that meet our conditions, hand-coding will cause us problems as our data changes. What if we update the `ae_attendances` data, and the list of organisations meeting our conditions changes? That would require us to do a lot of careful but tedious work to update the list of organisations that we apply `non_attendance_range()` to.
+
+This is where `purrr()` comes in. `purrr()` lets us apply functions to lists or vectors. In this case, we'll make a vector containing org_codes, and then use `map()` to apply our `non_admissions()` function over each of those org codes. We'll start that process in the next section.
+
+## `map()`
+
+So, we want to apply `non_admissions()` to lots of orgs, but we don't want to write repetitious code that needs manual updating. A much more trustworthy way through all of our our organisations is to use `purrr::map()`. Looking at the [reference manual](https://purrr.tidyverse.org/reference/map.html), `map()` takes two arguments:
+  
++ .x - a list or vector
++ .f - a function (or formula)
+  
+Let's try this out now. First, we'll make a vector of ten organisations and assign it to `short_org_codes`:
+
+```{r}
+short_org_codes <- ae_attendances %>%
+  distinct(org_code) %>%
+  arrange(org_code) %>%
+  slice(80:89) %>%
+  pull()
+```
+
+Note that we can happily use more than 10 organisations if we need to, although this will make for a slower knit, and a longer output document. Once we have our vector of organisations, applying our function to each is easy:
+
+```{r results='markup'}
+purrr::map(short_org_codes, non_admissions)
+```
+
+As long as our function only takes one argument, we can use *any* function in this call to `map()`:
+
+```{r}
+daft_printer <- function(org_code) {
+  
+  glue("ThIs OrG CoDe iS {org_code}  \n  \n")
+  
+  }
+
+daft_codes <- purrr::map(short_org_codes, daft_printer)
+```
+
+You'll note that `map()` gives us a list output:
+
+```{r results='markup'}
+class(daft_codes)
+```
+
+If you've never worked with lists in R before, a few words of introduction might be useful. Lists are a data structure that allow you to store different data types together. If we look at the `daft_codes` list that we just created using `summary()`, we can see that it's made up of 10 sublists, each with a single entry:
+
+```{r results='markup'}
+summary(daft_codes)
+```
+
+If we want to access the contents of our list, we use `[]` to access the sublists, and `[[]]` to access the contents of those sublists:
+
+```{rresults='markup'}
+daft_codes[1] # returns everything in the first sublist
+daft_codes[[1]] # returns just the first item in the first sublist
+```
+
+And you can access the contents of the list in all the ways you might expect. For instance, we can iterate using a for loop:
+
+```{r}
+for(i in seq_along(1:10)) {
+  cat(daft_codes[[i]])
+}
+```
+
+And - no surprise given the topic of this training - we can incorporate bits of the list into our Rmarkdown, like this: **`r daft_codes[[2]]`**
+
+In the next section, we'll experiment with some of the related functions that give different outputs, but work in the exact same way: provide a vector and a function, and `map()` will apply that function over each member of the vector.
+
+### Exercise
+
+```{r}
+# take a vector of names of the regional NHS boards
+regional_boards <- c("NHS Ayrshire and Arran", "NHS Borders", "NHS Dumfries and Galloway", "NHS Fife", "NHS Forth Valley", "NHS Grampian", "NHS Greater Glasgow and Clyde", "NHS Highland", "NHS Lanarkshire", "NHS Lothian", "NHS Orkney", "NHS Shetland", "NHS Tayside", "NHS Western Isles")
+
+# write a simple function to add the phrase "Results for " to the start of the supplied argument
+
+# then use map_chr() to apply that function over the vector of names
+
+```
+
+
+## `map()` variants {.tabset}
+
+### `map_lgl()`, `map_int()`, `map_dbl()` and `map_chr()`
+
+`map_lgl()`, `map_int()`, `map_dbl()` and `map_chr()` all work exactly like `map()`, except they return vectors, rather than lists. And they each work in the same way, with similar syntax and usage. However, if we try to run `map_dbl` on our existing function, we'll get an error:
+
+```{r eval=F}
+map_dbl(short_org_codes, non_admissions)
+```
+
+The reason this will give us an error is that each of these `map_whatever()` functions will specifically try to return a vector in the appropriate format. If this is new to you, then [R4DS is a great place to start](https://r4ds.had.co.nz/vectors.html), but in summary:
+
++ `_lgl` is logical (TRUE/FALSE)
++ `_int` is integers (14L)
++ `_dbl` is doubles (524.4)
++ `_chr` is character ("cheese")
+
+So we'll need to tweak our function so that it returns a result in the format that `map_whatever()` expects. Let's do that now:
+
+```{r}
+non_admissions_v <- function(single_org_code) {
+  non_admissions(single_org_code) %>% 
+    filter(year == "2018") %>% 
+    pull() %>% 
+    sum()
+  }
+```
+
+Our new function just returns the total non-admissions for the year 2018. Let's use `map_dbl()` and `map_chr()` to return a vector of doubles and characters respectively:
+
+```{r results='markup'}
+#dbl for doubles - ordinary decimal numbers
+map_dbl(short_org_codes, non_admissions_v)
+
+#chr for character
+map_chr(short_org_codes, non_admissions_v)
+```
+
+We'll need to tweak our function again to demonstrate the other variants:
+
+```{r results='markup'}
+
+non_admissions_int <- function(single_org_code) {
+  non_admissions(single_org_code) %>% 
+    filter(year == "2018") %>% 
+    pull() %>% 
+    sum() %>% 
+    as.integer()
+  }
+
+#int for integers
+map_int(short_org_codes, non_admissions_int)
+
+#lgl for logical (true/false)
+non_admissions_lgl <- function(single_org_code) {
+  non_admissions(single_org_code) %>% 
+    filter(year == "2018") %>% 
+    pull() %>% 
+    sum() %>% 
+    as.logical()
+  }
+
+map_lgl(short_org_codes, non_admissions_lgl)
+```
+
+#### Exercise
+
+Here are four functions:
+```{r}
+
+mystery_machine_1 <- function(argument) {
+  str_to_upper(argument)
+  }
+
+mystery_machine_2 <- function(argument) {
+  as.logical(str_length(argument) %% 2)
+  }
+
+mystery_machine_3 <- function(argument) {
+  str_length(argument)
+  }
+
+mystery_machine_4 <- function(argument) {
+  nchar(gsub("[^aeiou]", "", argument)) / nchar(argument)
+  }
+```
+
+Can you use the appropriate flavour of `map_whatever()` to produce a sensible output for each of the functions from the `regional_boards` vector that we created earlier?
+
+```{r}
+
+```
+
+
+
+### `map_dfr()` and `map_dfc()`
+
+`map_dfr()` is fantastically useful. It takes a function, applies it to the usual vector, and then *row binds the output* into a single big tibble: 
+
+```{r} 
+map_dfr(short_org_codes, non_admissions) %>% 
+  head() %>% 
+  knitr::kable()
+```
+
+My favourite application for this is when using `read_csv()` over a directory of files.
+```{r}
+#the simple version
+
+files <- list.files("./data/sign_up_1", full.names = T)
+
+files %>% 
+  map_dfr(read_csv) %>%
+  head() %>%
+  knitr::kable()
+
+# slightly more involved version, wrapping read_csv into a new function to allow indexing
+
+labeller <- function(file) {
+  read_csv(file, id="file_name")
+}
+
+files %>% 
+  map_dfr(labeller) %>%
+  head() %>%
+  knitr::kable()
+```
+
+There's also a matching `map_dfc()`, which column-binds the individual tibbles together. This is more finicky than `map_dfc()`, and won't work if you have e.g. different numbers of rows in the tibbles. As a proof-of-concept:
+
+```{r}
+random_nonsense <- function(name) {
+  tibble({{name}} := rnorm(1:5))
+}
+
+map_dfc(letters[1:7], random_nonsense) %>% knitr::kable()
+```
+
+Alternatively, you can either:
+
++ use dplyr's `left_join()`, or
++ `map_dfr()` and then pivot the data:
+
+```{r}
+files %>% 
+  map_dfr(labeller) %>%
+  pivot_wider(id_cols = c(email, reg_date), names_from = file_name, values_from = consent) %>%
+  head() %>%
+  knitr::kable()
+```
+
+## `walk()`
+
+`walk()` is used in exactly the same way as `map()`, but gives a different result. While `map()` and variants return something (like a vector or tibble), `walk()` just returns *any side effects of the code that you run as part of your function*. That makes `walk()` especially useful when drawing graphs, and when writing Rmarkdown. To demonstrate, we'll use a slightly more complicated function, which draws a graph with appropriate headers for organisations in the ae_attendance data matching a set of admissions and breaches conditions:
+
+```{r}
+
+admission_graphs <- function(org_code_arg) {
+  
+  if (nrow(ae_attendances %>% filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}})) == 0) {
+    
+    cat(glue("  \n  \nNo data exists for {org_code_arg}.  \n"))
+  
+    } else{
+  
+      cat(glue("  \n  \n### Results for {org_code_arg}  \n"))
+  
+  print(ae_attendances %>% 
+    filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}}) %>%
+    group_by(year = year(period), month = month(period)) %>%
+    mutate(end = period+days_in_month(month)-1) %>%
+    arrange(year, month) %>%
+    ggplot() +
+    geom_rect(aes(xmin=period, xmax=end, ymin=0, ymax=attendances)) +
+    labs(title= paste0(org_code_arg, " admissions for months with < 5 admissions and > 400 breaches")) +
+    scale_x_date(limits=ymd("2016-04-01", "2019-03-01")) )
+  cat('  \n  \n')
+    }
+}
+
+admission_graphs("RJ2")
+```
+
+We'll pause here to review this code, because it's useful to have a very clear idea of how a function works before we start to use it with `purrr()`. The function:
+
++ takes the `ae_attendance` data from the NHS-R datasets package
++ filters the data by the organisation code supplied in the argument to the function (e.g. when calling with `my_fun("RJ2")`)
++ it then filters for dates with fewer than 5 admissions and 400 breaches or more
+  + if no data is found, it prints a little error message
+  + otherwise, it plots a graph of the attendances in those months identified by the admissions and breaches conditions, and embeds the graph in a bit of Rmarkdown for presentation purposes.
+
+Let's try the function now. We'll start by looking at the first option: a case where the admission and breaches conditions are not met:
+
+```{r}
+admission_graphs("NLO10")
+```
+
+Now we'll look at the alternative:
+
+```{r}
+admission_graphs("RJ2")
+```
+
+So `admission_graphs()` prints a graph with appropriate Rmarkdown headers if there is data that meets our admissions and breaches conditions, but otherwise just tells us that there is no matching data. This means that we can use `walk()` to generate sections of reports (like this one) from vectors. Just to illustrate, we that we've been using above:
+
+```{r}
+walk(short_org_codes, admission_graphs)
+```
+
+
+## `map2()`
+
+`map2()` works exactly like `map()` and friends, except that it takes two arguments. We'll need a two-argument function, so let's update the `non_admissions_v()` function from above to allow us specify the year:
+
+```{r results='markup'}
+non_admissions_year <- function(single_org_code, year) {
+  non_admissions(single_org_code) %>% 
+    filter(year == {{year}}) %>% 
+    pull() %>% 
+    sum()
+  }
+
+non_admissions_year("RF4", "2018")
+
+map2(short_org_codes, "2018", non_admissions_year)
+
+```
+
+Again, that gives us a list as output - but all the `map()` variants that we discussed earlier will work in exactly the same way. Useful if we'd like to specify how many rows of our .csv files we'd like to skip (perhaps because they have nonsense headers). I've added some of these to the /data/sign_up_2 folder. These are identical to the data files that we loaded using `map_dfr()`, but have a line of gibberish at the start, which we'll need to exclude.
+
+`a row of utter nonsense` (some nonsense)
+`reg_date,consent,email` (the headers we want)
+`01/08/2022,Yes,3357@nhs.scot` (the data we want)
+
+If we try to `map_dfr()` over these files, we'll end up with a problem, because `read_csv()` will assume that all our data is in a single column:
+
+```{r}
+list.files("./data/sign_up_2", full.names = T) %>% 
+  map_dfr(read_csv) %>%
+  head() %>%
+  knitr::kable()
+
+```
+
+Luckily, we can specify a number of rows to skip via the `skip` argument of `read_csv()`. We'll wrap this into a new two-argument function called `labeller_skips()`:
+
+```{r}
+labeller_skips <- function(file, skip_rows=0) {
+  read_csv(file, id="file_name", skip=skip_rows)
+}
+```
+
+We can then `map2_dfr()`. We would usually specify each of the arguments using `.x` and `.y`. Note that here, `map2_dfr()` will assume that the list that we pipe to it from `list.files` will contain the first argument, so we can safely omit the `.x`:
+
+```{r}
+list.files("./data/sign_up_2", full.names = T) %>% 
+  map2_dfr(.y=1, labeller_skips) %>%
+  head() %>%
+  knitr::kable()
+```
+
+And, again, we can immediately set the tibble created by `map2_dfr()` to work - here's a quick example where we group the data into weeks, and then plot the number of sign-ups by week:
+
+```{r fig.height=2, fig.width=5}
+list.files("./data/sign_up_2", full.names = T) %>% 
+  map2_dfr(.y=1, labeller_skips) %>%
+  mutate(reg_week = floor_date(dmy(reg_date), unit="weeks")) %>%
+  group_by(reg_week) %>%
+  summarise(signups = n(), month=unique(file_name)) %>%
+  ggplot() +
+  geom_col(aes(x=reg_week, y=signups, fill=month)) +
+  xlab("Registration week") +
+  ylab("New signups") +
+  theme(legend.position="none")
+
+```
+
+
+## `walk2()`
+Say we now want to use the same 
+```{r fig.height=2, fig.width=6}
+
+admission_graphs_breaches <- function(org_code_arg, breach_count) {
+  
+  if (nrow(ae_attendances %>% filter(admissions < 5 & breaches >= {{breach_count}} & org_code == {{org_code_arg}})) == 0) {
+    
+    cat(glue("  \n  \nNo data exists for {org_code_arg}.  \n"))
+  
+    } else{
+  
+      cat(glue("  \n  \n### Results for {org_code_arg}  \n  \n"))
+  
+  print(ae_attendances %>% 
+    filter(admissions < 5 & breaches >= {{breach_count}} & org_code == {{org_code_arg}}) %>%
+    group_by(year = year(period), month = month(period)) %>%
+    mutate(end = period+days_in_month(month)-1) %>%
+    arrange(year, month) %>%
+    ggplot() +
+    geom_rect(aes(xmin=period, xmax=end, ymin=0, ymax=attendances)) +
+    labs(title= paste0(org_code_arg, " admissions for months with < 5 admissions and > ", breach_count, " breaches")) +
+    scale_x_date(limits=ymd("2016-04-01", "2019-03-01")) )
+  cat('  \n  \n')
+    }
+}
+
+walk2(.x="R1H", .y=c(10,20,50,100,150),admission_graphs_breaches )
+
+```
+
+## Resources
+
++ [`purrr()` cheat sheet](https://github.com/rstudio/cheatsheets/blob/main/purrr.pdf)
