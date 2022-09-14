@@ -4,12 +4,11 @@ author: "Brendan Clarke"
 date: "`r Sys.Date()`"
 always_allow_html: true
 output:
-  html_document:
-    toc: no
+  html_document: 
     toc_depth: 2
-    number_sections: no
     toc_float:
       collapsed: no
+    fig_height: 2
   word_document:
     toc: yes
     toc_depth: '2'
@@ -31,13 +30,16 @@ p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,str
 
 # Functions {.tabset}
 
-**Current status**
+Writing R as a beginner is largely about learning which functions do which jobs. In this training, we'll learn how to write our own functions. This is important, because building and using functions effectively is an excellent way of ensuring that your code is comprehensible (to others, and to yourself).
 
-Drafted, needs a good restructure - all the elements are here, but not yet in the right order
+It is part of a wider training programme designed as next steps for R users who have moved beyond introductory training. This programme covers:
 
-----
++ iteration
++ tidyselect
++ dplyr
++ purrr
 
-Writing R as a beginner is largely about learning which functions do which jobs. In this training, we'll learn how to write our own functions. This is important, because turning your code into functions is one useful way of keeping your code comprehensible (to others, and to yourself).
+This functions training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=[purrr training]) with any queries, comments, or suggestions.
 
 ## Introduction
 
@@ -45,7 +47,7 @@ If you haven't glanced at it before, the book *R for Data Science (R4DS)* comes 
 
 As beginners, we often end up writing complicated code. Say we write a block of code to draw a graph showing A&E waiting time breaches from one of the organisations in the `ae_attendances` data set:
 
-```{r fig.height=1.2, fig.width=3}
+```{r}
 ae_attendances %>%
   filter(org_code == "RF4" & type == "1") %>%
   ggplot() +
@@ -56,9 +58,9 @@ ae_attendances %>%
 
 There's no reason to turn this code into a function if we want to use it once or twice. But if we need to repeat it more than once, we should be thinking about making the code into a function. That way we could draw the same graph many times (once each for the `r length(unique(ae_attendances$org_code))` orgs in this data, perhaps).
 
-Imagine that we've ignored the advice, and have copy/pasted the code a couple of times, updating both the `labs()` and the `filter()` calls:
+Imagine that we've ignored this advice about copy/pasting, and have repeated the same code a few times, updating both the `labs()` and the `filter()` calls:
 
-```{r fig.height=1.2, fig.width=3}
+```{r}
 ae_attendances %>%
   filter(org_code == "RJF" & type == "1") %>%
   ggplot() +
@@ -67,7 +69,7 @@ ae_attendances %>%
   theme(axis.ticks.y = element_blank())
 ```
 
-```{r fig.height=1.2, fig.width=3}
+```{r}
 ae_attendances %>%
   filter(org_code == "RBN" & type == "1") %>%
   ggplot() +
@@ -76,7 +78,7 @@ ae_attendances %>%
   theme(axis.ticks.y = element_blank())
 ```
 
-```{r fig.height=1.2, fig.width=3}
+```{r}
 ae_attendances %>%
   filter(org_code == "RTR" & type == "1") %>%
   ggplot() +
@@ -99,7 +101,7 @@ We can solve all these problems by turning the code into a function. As the [R4D
 
 If we turn this code into a function - which you'll be able to do by the end of this training - we can re-use our code much more efficiently. If you compare the original code with the function, you can see that we'll only need to make a few changes to morph our code into a function:
 
-```{r fig.height=1.2, fig.width=3}
+```{r}
 # as a function
 
 ae_spark <- function(org, var) { # new code
@@ -236,8 +238,8 @@ In this exercise, you'll:
 ```
 
 
-## Simple functions
-We've already been playing around with a simple function. Now that we've spent some time thinking about function syntax, let's have a more detailed look at how our function works.
+## Using functions
+We've already been playing around with a simple function. Now that we've spent some time thinking about function syntax, let's have a more detailed look at how we use our function.
 
 ```{r}
 my_fun <- function(user_name) {
@@ -257,7 +259,7 @@ my_fun("Susan")
 
 + `my_fun("Susan")` = the call to the function that prints the result in the Rmarkdown (or console)
 
-Note that this isn't quite the simplest possible function. There's no reason at all that we might not use a 0-argument function - say, if we want to repeat a section of code efficiently. For example, say we want to put the range of some variable in our Rmarkdown text inline. This gets messy if we have more than a couple of lines of code to include, so we might wrap up the code in a function, and then call that in the Rmarkdown.
+Note that this isn't quite the simplest possible function. There's no reason at all that we might not use a 0-argument function - say, if we want to repeat a section of code efficiently. For example, say we want to put the range of some variable in our Rmarkdown text inline. This gets messy if we have more than a couple of lines of code to include, so we might wrap up the code in a function:
 
 ```{r}
 range_o_matic <- function() {
@@ -266,11 +268,12 @@ range_o_matic <- function() {
   range()
 }
 ```
-So when we want to print our range (which goes from `r range_o_matic()[[1]]` to `r as.integer(range_o_matic()[[2]])`) we don't need to put all that dplyr inline, which helps keep your code clean and organised. And we can now quickly print the range of the admissions variable that we have in our data, which is useful enough. 
+
+Then we can call `range_o_matic()` in the Rmarkdown when we want to print our range (which goes from `r range_o_matic()[[1]]` to `r as.integer(range_o_matic()[[2]])`). That saves us from putting all that dplyr inline, which helps keep your code clean and organised. And we can now quickly print the range of the admissions variable that we have in our data, which is useful enough. 
 
 ### Exercise
 
-Let's now tweak `range_o_matic()`. At the moment this gives us the range of the `admissions` variable. Can you tweak the function so that it gives us the range of the `attendances` variable instead? I'll start you off with the existing code.
+Let's now tweak `range_o_matic()`. At the moment this gives us the range of the `admissions` variable. Can you tweak the function so that it gives us the range of the `attendances` variable instead? I'll start you off with the existing code. Make sure that the function has a useful name!
 
 ```{r}
 range_o_matic <- function() {
@@ -283,6 +286,8 @@ range_o_matic <- function() {
 Once you've finished updating the function itself, make sure that you test it!
 
 Okay, so I hope I've show you that even 0-argument functions can be potentially useful. However, being able to add arguments allows us to apply functions to different aspects of our analysis without having to re-write the code each time, as we did above. Ideally, we'd like to be able to apply `range_o_matic()` to *any* variable in *any* data series. We'll return to this in the section after next. Next, we'll start explaining how to translate our own code into functions by adding arguments.
+
+We'll fix that in the next step
 
 ## Translating code into functions
 
@@ -297,7 +302,7 @@ We can do this by writing a function that:
 
 We could write some code like this:
 
-```{r}
+```{r results='markup'}
 raw_data <- c(2,7,6,4,5,8,6,3,4,5,6) # our numbers
 mean_raw_data <- mean(raw_data)   # the mean of all the numbers
 sum(abs(raw_data - mean_raw_data))  # find the sum of differences from mean
@@ -305,13 +310,13 @@ sum(abs(raw_data - mean_raw_data))  # find the sum of differences from mean
 
 We could then re-use this code by assigning some different numbers to the vector `raw_results`:
 
-```{r}
+```{r results='markup'}
 raw_data <- c(3,11,8,4,7,5,2,9,6,3,45,2) # our numbers
 mean_raw_data <- mean(raw_data)   # the mean of all the numbers
 sum(abs(raw_data - mean_raw_data))  # find the sum of differences from mean
 ```
 
-But reusing this code each time quickly gets complicated, particularly if you need to tweak the code as your code develops. Just to illustrate, while writing this I've just had to change two of the variable names in the two code blocks above, and it took me a solid couple of attempts before everything worked properly again. Let's avoid that kind of messing around if we can. As R4DS puts it, to keep things clean and simple, we should avoid copy/pasting code more than twice. The good news is that we can easily turn this code into a function together. Let's call this function `diff_sum()`. I'll work through this process below, and then you can have a go at translating some code above into a working function.
+But reusing this code each time quickly gets complicated, particularly if you need to tweak the code as your code develops. Just to illustrate, while writing this I've just had to change two of the variable names in the two code blocks above, and it took me a solid couple of attempts before everything worked properly again. Let's avoid that kind of messing around if we can. As R4DS puts it, to keep things clean and simple, we should avoid copy/pasting code more than twice. The good news is that we can easily turn this code into a function together. Let's call this function `diff_sum()`. I'll work through this process below, and then you can have a go at translating some new code into a working function.
 
 The first job is to set up the function syntax. This is really simple:
 
@@ -346,7 +351,7 @@ diff_sum <- function(data) {
 
 This won't run properly either, because at the moment the `data` argument doesn't get used in the calculation in the function. So we'll need to update the variable names inside the body of the function:
 
-```{r}
+```{r results='markup'}
 diff_sum <- function(data) {
 
   mean_raw_data <- mean(data)   # the mean of all the numbers
@@ -359,11 +364,14 @@ diff_sum(c(8,4,1,11,7,5,-17,12,-4,2,9,6,3,45,2))
 
 ### Exercise
 
-So, we'll conclude with an exercise. Can you build your own function along the lines of `diff_sum`? I'll start you off with some working code:
+So, we'll conclude this section on translation with an exercise. Can you build your own function along the lines of `diff_sum`? I'll start you off with some working code:
 
 ```{r}
-number <- 5
-number * number
+
+raw_data <- c(3,11,8,4,7,5,2,9,6,3,45,2) # our numbers
+mean_raw_data <- round(mean(raw_data), 2)   # the mean of all the numbers
+sd_raw_data <- round(sd(raw_data), 2)  # the standard deviation of the numbers
+cat(glue("The mean of our data is {mean_raw_data} and the standard deviation is {sd_raw_data}")) # output
 
 # write your function here
 
@@ -371,11 +379,10 @@ number * number
 
 A suggestion for approaching this exercise:
 
-+ start with the bare-bones of the function
++ start with the bare-bones of the function syntax
 + copy all the code inside the function
-+ review the code, so that instead of `number` being hard-coded, we instead use an argument to pass the number to the function
++ review the code, so that instead of `raw_data` being hard-coded, we use an argument to pass the numbers to the function
 + test your working function with a selection of numbers
-
 
 ## More complicated functions
 
@@ -383,13 +390,13 @@ So far, we've only used very simple code as the body of our functions. We're goi
 
 ### Indirection
 
-Back to `range-o-matic()`. We wanted to adapt this so that we could supply it with any variable in any data set, and have it return the range. Let's have a go at doing that:
+Back to our 0-argument function `range-o-matic()`. We want to adapt this so that we could supply it with any variable in any data set, and have it return the range. Let's have a go at doing that:
 
 ```{r eval=F}
 range_o_matic <- function(data, var) {
   data %>%
-  pull(var) %>%
-  range()
+    pull(var) %>%
+    range()
 }
 
 range_o_matic(ae_attendances, attendances)
@@ -415,9 +422,7 @@ Compare and contrast the base-R way of doing something similar, which would be:
 ```{r eval=F}
 ae_attendances$attendances
 ```
-Here, the `$` is the link between the tibble and the column. Not having to explictly specify the data each time is usually a tremendous advantage. When it comes to functions, though, it's a bit more tricky.
-
-<!-- Link to programming with dplyr -->
+Here, the `$` is the link between the tibble and the column. Not having to explictly specify the data each time is usually a tremendous advantage. When it comes to functions, though, it's a bit more tricky. The short reason for the difficulties that we've been having is **indirection**. We want to pass the name of an argument as if it were the name of a column. However, we have to do some work so that R will interpret this argument correctly. To do this, we need to **embrace** our argument by wrapping in double curly-brackets like this - (`{{argument}}`) - so that R will recognise it as the name of a column:
 
 ```{r eval=F}
 range_o_matic <- function(data, var) {
@@ -428,35 +433,37 @@ range_o_matic <- function(data, var) {
 
 range_o_matic(ae_attendances, attendances)
 range_o_matic(LOS_model, Age)
-LOS_model
+
 ```
 
-```{r}
+Much more detail on indirection can be found [in the *Programming with dplyr vignette*](https://dplyr.tidyverse.org/articles/programming.html). Again, there's a bit of complexity here, and we have training that covers this available in other parts of the KIND Learning Network intermediate R programme. I'd recommend [the *Advanced R* chapter on quasiquotation](https://adv-r.hadley.nz/quasiquotation.html) for a fuller sense of the details. Practice is important here - a little bit of trial and error, and a lot of focused searching for help is an excellent way to learn.
 
-# example of wrapping slightly complicated code for re-use
-my_fun <- function() {
-  ae_attendances %>% 
+Now that we've gained a bit of experience in indirecting within a simple function, we'll try something similar with more complicated code.
+
+## 1-argument functions
+
+As we've already discussed, real power comes in passing arguments to your function, so that you can re-use the code with a new analytical target. Let's apply this principle to a more involved chunk of R/Rmarkdown code. Here's some code that draws a graph with appropriate headers and titles:
+
+```{r}
+#bare code
+
+ae_attendances %>% 
     filter(admissions < 5 & breaches >= 400 & org_code == "RJ2") %>%
     group_by(year = year(period), month = month(period)) %>%
     arrange(year, month) %>%
     ggplot() +
     geom_col(aes(x=period, y=attendances)) +
-    labs(title="RJ2 admissions for months with < 5 admissions and > 400 breaches")
-}
+    labs(title= "RJ2 admissions for months with < 5 admissions and > 400 breaches") +
+    scale_x_date(limits=ymd("2016-04-01", "2019-03-01"))
 
-my_fun()
+
 ```
 
-
-This gets complicated [see the *Advanced R* chapter](https://adv-r.hadley.nz/quasiquotation.html) for many more details. Practice is important here - a little bit of trial and error, and a lot of focused searching for help is an excellent way to learn.
-
-## 1-argument functions
-
-Real power comes in passing arguments to your function, so that you can re-use the code with a new analytical target. Let's give `my_fun()` an argument:
+Now as a function `admissions_graph()`:
 
 ```{r}
 # example of single argument passed to function
-my_fun <- function(org_code_arg) {
+admissions_graph <- function(org_code_arg) {
   ae_attendances %>% 
     filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}}) %>%
     group_by(year = year(period), month = month(period)) %>%
@@ -467,26 +474,26 @@ my_fun <- function(org_code_arg) {
     scale_x_date(limits=ymd("2016-04-01", "2019-03-01"))
 }
 
-my_fun("RJ2")
+admissions_graph("RJ2")
 
 ```
 
-Okay, so that's updated the data but not the title. We can re-use that same argument (with a little bit of creative use of `paste0()`) to give us a more useful title:
+Okay, so that's updated the data but not the title. We can re-use that same argument (with a little bit of creative use of `glue()`) to give us a more useful title:
 
 ```{r}
 # example of single argument passed to function
-my_fun <- function(org_code_arg) {
+admissions_graph <- function(org_code_arg) {
   ae_attendances %>% 
     filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}}) %>%
     group_by(year = year(period), month = month(period)) %>%
     arrange(year, month) %>%
     ggplot() +
     geom_col(aes(x=period, y=attendances)) +
-    labs(title= paste0(org_code_arg, " admissions for months with < 5 admissions and > 400 breaches")) +
+    labs(title= glue("{org_code_arg} admissions for months with < 5 admissions and > 400 breaches")) +
     scale_x_date(limits=ymd("2016-04-01", "2019-03-01"))
 }
 
-my_fun("RJ2")
+admissions_graph("RJ2")
 
 ```
 
@@ -494,15 +501,13 @@ Changing the title is a useful tweak to our function. Note though that we have s
 
 ```{r}
 
-my_fun("NLO10")
+admissions_graph("NLO10")
 
 ```
 
-We'll fix that in the next step
-
 ## Conditional execution
 
-We want our function to give us a sensible result when we have no matching data for our org_code. We can do this by using if()/ifelse() in our function. As a quick primer, `if()` works as follows:
+We want our function to give us a sensible result when we have no matching data for our org_code. We can do this by using `if()` or `ifelse()` in our function. As a quick primer, `if()` works as follows:
 
 ```{r eval=F}
 if (something){
@@ -514,16 +519,16 @@ if (something){
 
 The usual example used to demonstrate `if()` is a simple odd/even checker using `%%`, which returns the remainder of a division. We know that there will be no remainder if we divide an even number by 2:
 
-```{r}
+```{r results='markup'}
 
 14 %% 2 == 0
 13 %% 2 == 0
 
 ```
 
-And so
+And so:
 
-```{r}
+```{r results='markup'}
 
 if(14 %% 2 == 0){
   print("Even")
@@ -532,9 +537,10 @@ if(14 %% 2 == 0){
 }
 
 ```
-Not a shock that 14 is always even, so let's take what we know about functions to set up a function that will tell is if any number is odd or even:
 
-```{r}
+That code works, but isn't useful (unless you have difficulty remembering that 14 is always even). Let's take what we know about functions to set up a function that will tell is if any number is odd or even:
+
+```{r results='markup'}
 is_even <- function(n){
   
   if(n %% 2 == 0){
@@ -549,18 +555,20 @@ is_even(11)
 is_even(-898543143130)
 
 ```
-Okay, interesting enough. But what's much more interesting is that we can be more ambitious than just printing odd or even. Let's see if we can handle our org_code problem more elegantly than just printing an empty graph.
+Okay, interesting enough. But what's much more interesting is that we can be more ambitious than just printing odd or even. Let's see if we can handle our `admissions_graph()` problems more elegantly than just printing an empty graph in cases where we don't have any matching data.
+
+We can add an `if()` statement to the body of `admissions_graph()`. Now, we print an error message when we have no matching data, and a graph with headers when we do:
 
 ```{r results='asis'}
-my_fun <- function(org_code_arg) {
+admissions_graph <- function(org_code_arg) {
   
   if (nrow(ae_attendances %>% filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}})) == 0) {
     
-    cat(paste0("No data exists for ", org_code_arg, ".  \n"))
+    cat(glue("No data exists for {org_code_arg}.  \n"))
   
     } else{
   
-      cat("  \n  \n### Results for ", org_code_arg, "  \n")
+      cat(glue("  \n  \n### Results for {org_code_arg}  \n"))
   
   print(ae_attendances %>% 
     filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}}) %>%
@@ -569,23 +577,19 @@ my_fun <- function(org_code_arg) {
     arrange(year, month) %>%
     ggplot() +
     geom_rect(aes(xmin=period, xmax=end, ymin=0, ymax=attendances)) +
-    labs(title= paste0(org_code_arg, " admissions for months with < 5 admissions and > 400 breaches")) +
+    labs(title= glue("{org_code_arg} admissions for months with < 5 admissions and > 400 breaches")) +
     scale_x_date(limits=ymd("2016-04-01", "2019-03-01")) )
   cat('  \n  \n')
     }
 }
 
-my_fun("NLO10")
-my_fun("RJ2")
+admissions_graph("NLO10")
+admissions_graph("RJ2")
 
+# we should get graphs for "RYX", "Y03082", "RJZ", "RJ2", "RAP", "NR3", "NLO01", "RN3", "RDR"
 ```
 
 ## Dot dot dot `(...)`
-<!-- Look at `??tidyselect`` especially *Implementing tidyselect interfaces* -->
-<!-- Just a taster, really - ?/save for special tidyverse functions module -->
-
-<!-- and  -->
-<!-- dyn-dots {rlang} -->
 
 Easier to see than to explain, but roughly:
 
@@ -614,7 +618,7 @@ graph_caption <- function() {
 }
 ```
 
-Again, this produces a bit of Rmarkdown:
+Alone, this function produces a bit of Rmarkdown:
 ```{r}
 graph_caption()
 ```
@@ -644,17 +648,22 @@ graph_caption <- function(...) {
 graph_caption("Susan", "NHS 24")
 ```
 
-As a final thought, this is a really strong combination with `purrr()`, which is covered in another training session. `purrr()` allows you to repeat functions over other objects, like tibbles. To illustrate:
+As a final thought, this sort of function combines beautifully with the `purrr()` package, which is covered in another training session. `purrr()` allows you to repeat functions over other objects, like tibbles. To illustrate, let's finish this training session by joining up two functions (`admissions_graph()` and  `graph_caption()`), and then using `walk2()` to generate a series of Rmarkdown pages from a tibble of author names and organisations:
 
 ```{r}
 authors <- tribble(
   ~name, ~org,
-  "Steve", "NSS",
-  "Susan", "NHS 24",
-  "Ameet", "NES",
-  "Eilidh", "NHS Highland"
+  "Steve", "Y03082",
+  "Susan", "RJ2",
+  "Ameet", "NR3",
+  "Eilidh", "RN3"
 )
 
-walk2(authors$name, authors$org, graph_caption)
+full_graph <- function(name, org) {
+  admissions_graph(org)
+  graph_caption(name, org)
+}
+
+walk2(authors$name, authors$org, full_graph)
 ```
 

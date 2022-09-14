@@ -1,5 +1,6 @@
 *.html
 *.pdf
+*.docx
 /archive
 
 # History files

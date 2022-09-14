@@ -28,10 +28,25 @@ library("pacman")
 p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang,glue)
 ```
 
+## current status
+
+- draft needed for output and body sections
+- more explanation in vectorised functions
+- examples
+
 # Iteration {.tabset}
 Norm against using loops in R. Two reasons: performance, and vectorised functions
 
 Imperative programming (for loops) has a place - even if a purist might avoid them. Computer time is usually cheaper than analyst time - and loops definitely have some strengths in real-world analysis, particularly when you need to repeatedly apply a non-vectorised functions - like some of the core Rmarkdown functions. And we'll cover some important tips for avoiding the worst of the performance hit that iteration can cause to your work.
+
+This training session is part of a wider training programme designed as next steps for R users who have moved beyond introductory training. This programme covers:
+
++ tidyselect
++ functions
++ dplyr
++ purr
+
+This iteration training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=[purrr training]) with any queries, comments, or suggestions.
 
 ## Introduction
 
