@@ -714,6 +714,3 @@ ae_attendances %>%
   summarise(total=sum(c(attendances, breaches, admissions)))
 
 ```
-
-
-

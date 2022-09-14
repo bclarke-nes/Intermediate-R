@@ -34,7 +34,7 @@ Purrr is a set of tools for working with functions. This training provides an in
 
 + iteration
 + functions
-+ tidyselect
++ tidy evaluation
 + dplyr
 
 This purrr training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=[purrr training]) with any queries, comments, or suggestions.

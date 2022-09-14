@@ -52,7 +52,7 @@ If you were able to answer these fluently, then great, this training is meant fo
 This is a modular training course split into four 90 minute sections. 
 
 - getting the best out of `dplyr` using `NHSRdatasets` as a model system for real-world analysis in R
-- tidyselect
+- tidy evaluation, building programming skills in the tidyverse
 - functions, including data indirection for tidyverse functions
 - iteration, including using iteration to generate Rmarkdown
 - the `purrr` package

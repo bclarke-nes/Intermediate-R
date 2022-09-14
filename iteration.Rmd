@@ -41,7 +41,7 @@ Imperative programming (for loops) has a place - even if a purist might avoid th
 
 This training session is part of a wider training programme designed as next steps for R users who have moved beyond introductory training. This programme covers:
 
-+ tidyselect
++ tidy evaluation
 + functions
 + dplyr
 + purr
