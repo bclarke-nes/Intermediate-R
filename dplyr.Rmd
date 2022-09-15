@@ -4,12 +4,12 @@ author: "Brendan Clarke"
 date: "`r Sys.Date()`"
 always_allow_html: true
 output:
-  html_document:
-    toc: no
+  html_document: 
     toc_depth: 2
-    number_sections: no
     toc_float:
       collapsed: no
+    fig_width: 6
+    fig_height: 2
   word_document:
     toc: yes
     toc_depth: '2'
@@ -30,52 +30,70 @@ editor_options:
 ----
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'asis')
 install.packages(setdiff("pacman", rownames(installed.packages())))
 library("pacman")
-p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang)
+p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang, glue)
 
 # avoiding tidyverse due to memory issues in RStudio Cloud environment 
 ```
 
-`dplyr` is, I think, fairly easy to start using. The aim of this section is to do two things:
+The aim of this session is to do three things with `dplyr`:
+
 + build your fluency with basic dplyr functionality
++ show some of the similarities of approach across the package, again to help you master the syntax
 + learn some of the more advanced functions to harness the power available beneath the surface
 
-The training is split into sections, which are broadly themed around some of the core analyst jobs. We'll work through the sections in order. There is a little bit of cross-over in parts with some of the other intermediate R training sessions. For example, if you look at the next code block below you can see some basic functions to stream-line displaying our data. 
+This training session is part of a wider training programme designed as next steps for R users who have moved beyond introductory training. This programme covers:
 
-1. An introduction to the NHS-R data sets, which are used thoughout the rest of this training
++ tidy evaluation
++ functions
++ dplyr
++ purr
+
+This dplyr training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=[purrr training]) with any queries, comments, or suggestions.
+
+## Introduction
+
+In this session, we will cover the following areas:  
+
+1. An introduction to the NHS-R data sets, which are used throughout the rest of this training
 2. Investigating data, where look at some dplyr functions that are particularly helpful when looking at a new data set
-3. A section on tidyselect, where we'll learn some new ways of referencing columns in dplyr
+3. A brief introduction to tidyselect, where we'll learn some new ways of referencing columns in dplyr. This material is covered in more details in the session on tidy evaluation. We'll also use this section as a refresher on core dplyr functions
 4. A section on summarising data
+5. Joins and pivots
 5. case_when mutate
 
-## NHS-R data
+You should have at least some previous experience working with dplyr before starting this training. Specifically, you should be familiar with at least:
 
-Explanatory materials on [CRAN](https://cran.r-project.org/web/packages/NHSRdatasets/index.html).
++ `select()`, to select columns from data
++ `filter()`, to select rows from data
++ `mutate()`, to make new columns from existing columns
++ as well as a basic familiarity with using R to manage data
 
-`NHSRdatasets` contains 5 data sets:
+## NHS-R data {.tabset}
+
+Because dplyr provides tools for working with data, we'll need some suitable data to play with. R comes with lots of interesting data sets built-in (and you can explore these using `data()`), in this training we'll use some health data put together by the [NHS-R community](https://nhsrcommunity.com/). You can find additional explanatory materials for these NHS data sets on [CRAN](https://cran.r-project.org/web/packages/NHSRdatasets/index.html), but the short version is that the `NHSRdatasets` package has 5 data sets:
 
 + `ae_attendances` - A+E attendance data
 + `LOS_model` - length of stay data
 + `ons_mortality` - England and Wales mortality data
-+ `stranded_data` - synthetic data for ML models
-+ `synthetic_news_data` - synthetic early warning score data
++ `stranded_data` - synthetic data, designed for training machine learning models
++ `synthetic_news_data` - synthetic data about early warning scores, again designed for ML purposes
 
-Let's look at some data from `NHSRdatasets`:
+Let's look at some data from `NHSRdatasets` package below. If you're following the code, you'll see that there are a couple of helper functions to simplify some of the display work here. We'll start to use these datasets in the next section:
 
-```{r echo=F, message=F, results='asis'}
+```{r echo=F}
 
 # functions to stream-line displaying our data
 
 data_describer <- function(df) {
 
   # allows us to display the name of the df as a new subsection with a little bit of nicely formatted Rmarkdown  
-  
   df_name <- deparse(substitute(df))
   
   cat(paste0("  \n### data - ", df_name,"  \n"))
-  cat(paste0("  \n", df_name, " has ", nrow(df), " rows and ", length(df), " columns.  \n"))
+  cat(paste0("  \n", df_name, " has ", nrow(df), " rows and ", length(df), " columns.  \n  \n"))
   display(df)
 
 }
@@ -83,7 +101,7 @@ data_describer <- function(df) {
 # function to set knitr::kable options quickly
 disp_full <- function(df) {
   df %>% 
-    knitr::kable(format="html", table.attr = "style='width:70%;'")
+    knitr::kable()
 }
 
 # function to display head() only and then dis_full
@@ -111,29 +129,27 @@ data_describer(stranded_data)
 data_describer(synthetic_news_data)
 ```
 
-We'll start to use these datasets in the next section.
+## Investigating data {.tabset}
 
-## Investigating data with dplyr {.tabset}
+The data in the five `NHSRdatasets` package is nicely [tidy](https://cran.r-project.org/web/packages/tidyr/vignettes/tidy-data.html). By this, we mean that:
 
-This assumes that your data is fairly tidy and easy to work-with
++ Every column is a variable.
++ Every row is an observation.
++ Every cell is a single value.
 
-Planned tidyr session - data wrangling
+Tidying data is an art of its own. For this training session, though, you can assume that the data that we'll be working with starts off in this tidy format. 
 
-Four functions that are surprisingly useful to quickly investigate new data:
+We'll start with four functions that are useful when you're investigating new data - `slice()`, `glimpse()`, `rename()` and `relocate()`:
 
-+ [slice()](https://dplyr.tidyverse.org/reference/slice.html)
-+ [glimpse()](https://dplyr.tidyverse.org/reference/glimpse.html)
-+ [rename()](https://dplyr.tidyverse.org/reference/rename.html)
-+ [relocate()](https://dplyr.tidyverse.org/reference/relocate.html)
 
 ### `slice()`
 
-+ [slice() manual page](https://dplyr.tidyverse.org/reference/slice.html)
++ [`slice()` manual page](https://dplyr.tidyverse.org/reference/slice.html)
 
 At its simplest, `slice()` is an alternative to head:
 ```{r echo=T}
 ae_attendances %>% 
-  slice(3) %>%
+  slice(1:6) %>%
   disp_full()
 
 ```
@@ -151,7 +167,7 @@ ae_attendances %>%
 
 ```
 
-More interestingly, you can group, then slice, to see the first row of each group. Here, the data is filtered, grouped by org_code, then we slice the top row of each group:
+More interestingly, you can `group_by()`, then slice, to see the first row of each group. Here, the data is filtered, grouped by org_code, then we slice the top row of each group:
 
 ```{r}
 ae_attendances %>%
@@ -161,11 +177,20 @@ ae_attendances %>%
   disp_full()
 ```
 
-The `slice_min()` and `slice_max()` functions are also useful for doing something similar:
+(we'll explore `group_by()` later in the session, so don't worry if this is new to you)
+
+The `slice_min()` and `slice_max()` functions are also useful, giving you something like an integrated `arrange()` for looking at slices of the data:
 
 ```{r}
 ae_attendances %>%
   slice_max(breaches, n=6) %>%
+  disp_full()
+
+# equivalent to
+
+ae_attendances %>%
+  arrange(desc(breaches)) %>%
+  slice(1:6) %>%
   disp_full()
 ```
 
@@ -189,19 +214,19 @@ ae_attendances %>%
 
 ### `glimpse()`
 
-[glimpse() manual page](https://dplyr.tidyverse.org/reference/glimpse.html)
++ [`glimpse()` manual page](https://dplyr.tidyverse.org/reference/glimpse.html)
 
 `glimpse()` is a data viewing function similar to `print()`, except it transposes the data so that each column is displayed as a row. This is particularly useful for wide data with many columns, especially when you are interested in checking the class (date, character, etc) of your columns.
 
-```{r}
-# glimpse for names and types
+```{r eval=T, results='markup'}
+# glimpse for names and types.
 synthetic_news_data %>% 
   glimpse() 
 ```
 
 Note the useful dimension information in the first two lines, and the class information in angle brackets. Okay, so there are lots of similar ways of displaying the same information, but `glimpse()` is nice and concise both to write and to read. Compare a couple of base r (or purrr) near-equivalents, which are especially messy when the data is quite wide:
 
-```{r}
+```{r results='markup'}
 # finding column classes # map_df
 synthetic_news_data %>% map_df(class)
 
@@ -211,7 +236,7 @@ lapply(synthetic_news_data, class)
 
 `glimpse()` plays nicely with the pipe, meaning that it's potentially useful while you're working on a complicated data transformation. If you have lots of stages piped together, you can insert `glimpse()` in periodically to check that each stage of your transformation is working as expected:
 
-```{r}
+```{r eval=T, results='markup'}
 synthetic_news_data %>% 
   glimpse() %>%
   filter(age == 71 & male == 0) %>%
@@ -224,7 +249,9 @@ synthetic_news_data %>%
 
 ### `rename()` (and `rename_with()`)
 
-New name = old name is the key:
++ [`rename()` manual page](https://dplyr.tidyverse.org/reference/rename.html)
+
+Like `mutate()`, the general syntax for `rename()` is *new name* = *old name*.
 
 ```{r}
 LOS_model %>%
@@ -236,22 +263,29 @@ LOS_model %>%
   display()
 
 ```
-`rename()` also works with tidyselect, which we'll cover towards the end of this session.
+`rename()` works well with tidyselect operators, which we'll cover briefly during this session. We also have a stand-alone session on [tidy evaluation](https://dplyr.tidyverse.org/articles/programming.html), which covers this territory in more depth.
 
 ### `relocate()`
+
++ [`relocate()` manual page](https://dplyr.tidyverse.org/reference/relocate.html)
 
 `relocate()` re-arranges the order of columns:
 
 ```{r}
 LOS_model %>%
   display()
+```
 
-# default behaviour is to move specified columns to the far left
+`relocate()`'s default behaviour is to move specified columns to the far left:
+```{r}
 LOS_model %>%
   relocate(LOS) %>%
   display()
+```
 
-# use .before and .after to specify in more detail
+You can specify `.before` and `.after` if you need finer control over where your column ends up:
+
+```{r}
 LOS_model %>%
   relocate(LOS, .after=Death) %>%
   display()
@@ -263,118 +297,28 @@ LOS_model %>%
 
 ## tidyselect {.tabset}
 
-Lots of the power in `dplyr` comes from the many ways that you can select columns. In this section, we'll look at tidyselect, which is a series of functions that allow you to specify columns by various  patterns. Not only does this give you lots of ways of simplifying and streamlining your code, but it's also a great way of making your code more portable - so that it works well inside functions, or across different data sets. We'll look at five groups of functions in this section. There's quite a lot to absorb, so I would definitely recommend using the manual pages (using `??tidyselect`) as a reference for this.
+Lots of the power in `dplyr` comes from the many ways that you can select columns. In this section, we'll look at some examples of tidyselect, which is a series of functions that allow you to specify columns by various  patterns. Not only does this give you lots of ways of simplifying and streamlining your code, but it's also a great way of making your code more portable - so that it works well inside functions, or across different data sets. 
 
-+ logical operators
-  + `:`, `!`, `&`, `|`, `c()`
-+ pattern matching
+In the tidy evaluation training session, we look across this material in much more depth. There's quite a lot to absorb, so I would definitely recommend using the manual pages (using `??tidyselect`) as a reference for this section.
+
+### `contains()`
+
+`contains()` is a good example of tidyselect functions that are based on pattern matching. There are several related functions that work in the same way, including:
+
   + `starts_with()`
   + `ends_with()`
-  + `contains()`
   + `matches()`
   + `num_range()`
-+ match from a character vector
-  + `all_of()`
-  + `any_of()`
-+ selection helpers for specific columns
-  + `everything()`
-  + `last_col()`
-+ selecting with a function
-+ `where()`
-
-We'll use `stranded_data` for this section.
+  
+Here, we'll concentrate on `contains()` as an exemplar for this family, because the other functions in the family work in a very similar way. `contains()` allows you to pick columns based on their names. So to `select()` all the columns in `stranded_data` whose names contain the string "care":
 
 ```{r warning=F, message=F}
 stranded_data %>%
+  select(contains("care")) %>%
   display()
 ```
 
-### logical operators
-```{r warning=F, message=F}
-#might need ggvenn or similar here - it'd be helpful to show the relationships visually
-
-# select ranges using :
-stranded_data %>%
-  select(age:hcop) %>%
-  display()
-
-# complement / not using !
-stranded_data %>%
-  select(!stranded.label) %>%
-  display()
-
-# intersection / and using &
-## to select many columns just specify what you need:
-stranded_data %>%
-  select(stranded.label, hcop, age) %>%
-  display()
-
-# note that & is meant to be used with pattern matching helpers
-stranded_data %>%
-  select(starts_with("m") & ends_with("e")) %>%
-  display()
-
-# union / inclusive or with |
-stranded_data %>%
-  select(starts_with("m") | ends_with("e")) %>%
-  display()
-
-# combining with c()
-## use c() to pass many options to selection helpers
-stranded_data %>%
-  select(!c(stranded.label, hcop, age)) %>%
-  display()
-
-```
-
-### pattern matching {.tabset}
-#### `starts_with()`
-
-```{r warning=F, message=F}
-stranded_data %>%
-  select(starts_with("care")) %>%
-  display()
-```
-
-Default is non-case sensitive
-
-```{r warning=F, message=F}
-
-stranded_data %>%
-  select(starts_with("Care"))  %>%
-  display()
-
-stranded_data %>%
-  select(starts_with("Care", ignore.case = FALSE))  %>%
-  display()
-```
-
-#### `ends_with()`
-
-```{r warning=F, message=F}
-stranded_data %>%
-  select(age, ends_with("care")) %>%
-  display()
-```
-
-Can use many suffixes using `c()`:
-
-```{r warning=F, message=F}
-stranded_data %>%
-  select(ends_with(c("label", "safe", "care"))) %>%
-  display()
-```
-
-These are returned in order:
-
-```{r warning=F, message=F}
-stranded_data %>%
-  select(ends_with(c("care", "label", "safe"))) %>%
-  display()
-```
-
-#### `contains()`
-`contains()` is for strings
+You can combine the `contains()` statement with other `select()` criteria:
 
 ```{r warning=F, message=F}
 stranded_data %>%
@@ -382,104 +326,48 @@ stranded_data %>%
   display()
 ```
 
-#### `matches()`
-`matches()` is for regular expressions (regex). This is a way of matching all kinds of strings by specifying a particular pattern. For example, you can use regex to search through some text for all the @nhs.scot email addresses that it contains. In pseudocode, the regex would work like this:
-
-+ look for @nhs.scot
-+ look back to the start of the word that contains @nhs.scot
-+ make sure that the word doesn't contain any forbidden characters
-
-(the regex would look like this - use https://regex101.com/ to help)
-
-As the above probably suggests, regex is extremely powerful, but a bit human-hostile. So I've given a couple of very simple examples below that cover some of the common cases:
+And you can match over a vector of strings:
 
 ```{r warning=F, message=F}
-# match one of a group of letters using []
-# so return cols containing either "med" or "men" with "me[dn]"
-
 stranded_data %>%
-  select(matches("me[dn]"))  %>%
+  select(contains(c("care", "age"))) %>%
   display()
-
-#some more examples please
 ```
 
-#### `num_range()`
+The order of strings in your vector will determine the order of columns returned:
 
-For selecting a group of numbered columns.
 ```{r warning=F, message=F}
-# the man page example is a useful introduction:
-billboard %>%
-  select(num_range("wk", 10:15)) %>%
+stranded_data %>%
+  select(contains(c("age", "care"))) %>%
   display()
 ```
 
-This often arises when using `pivot_wider()` to transform data. For example:
+And you can negate the contains to give the complement:
 
-```{r warning=F, message=F} 
-# pivot_wider on ons_mortality data
-ons_mortality %>%
-  pivot_wider(names_from = week_no, values_from = counts, names_prefix = "week_") %>%
+```{r warning=F, message=F}
+stranded_data %>%
+  select(-contains(c("age", "care"))) %>%
   display()
-
-ons_mortality %>%
-  pivot_wider(names_from = week_no, values_from = counts, names_prefix = "week_") %>%
-  select(date, num_range("week_", 20:25)) %>%
-  display()
-
-#specify the number of digits in the range using width=n
-ons_mortality %>%
-  pivot_wider(names_from = week_no, values_from = counts, names_prefix = "week_0") %>%
-  select(date, num_range("week_", 20:25)) %>%
-  display()
-
-ons_mortality %>%
-  pivot_wider(names_from = week_no, values_from = counts, names_prefix = "week_0") %>%
-  select(date, num_range("week_", 20:25, width=3)) %>%
-  display()
-
 ```
 
-### matching character vectors
+### `any_of()`
 
-#### `all_of()`
-This function matches all column names in some character vector. This can be very useful if you're working with many different sets of data with predictable column names.
+`any_of()` matches full column names from a vector of names. Let's set up some names:
 
-```{r warning=F, message=F} 
+```{r results='markup'} 
 my_columns <- names(stranded_data)[1:4]
-
-my_columns
-
-stranded_data %>%
-  select(all_of(my_columns)) %>%
-  display()
-
-```
-
-As the name suggests, `all_of()` will match all the column names in the vector, and will give you an error if a name in the vector is missing from the column names:
-
-```{r warning=T, message=F} 
-my_columns <- c(my_columns, "smoking_status")
 my_columns
 ```
 
-So this code will cause an error:
+If we supply `any_of()` with this vector of names, `any_of()` will match any column names that appear in the vector, and ignore those that do not:
 
-```{r eval=F, warning=T, message=F} 
-stranded_data %>%
-  select(all_of(my_columns)) %>%
-  display()
-```
-
-#### `any_of()`
-
-`any_of()` will match any column names that appear in the vector, and ignore those that do not:
-
-```{r warning=T, message=F} 
+```{r}
 stranded_data %>%
   select(any_of(my_columns)) %>%
   display()
 ```
+
+Compared to `contains()`, `any_of()` will match the entire name, while `contains()` will match any part of the name. 
 
 There's a great tip on the `all_of()` man page - `any_of()` is an especially clever way to drop columns from a tibble because calling it more than once does not cause an error:
 
@@ -490,227 +378,345 @@ stranded_data %>%
   display()
 ```
 
-### selection helpers for specific columns
-#### `everything()`
+Trying to do something similar using `select()` will cause an error:
+
+```{r eval=F}
+stranded_data %>%
+  select(-age) %>%
+  select(-age)
+```
+
+### `everything()`
 
 `everything()` selects all columns. This is less useful in combination with `select()` itself, but simplifies some other functions well - particularly with `pivot_longer()`. 
 
-```{r warning=T, message=F}
-#Using the stock mtcars data here to demonstrate:
-
-mtcars %>% pivot_longer(everything())
-
-# You need the same data types in each column to pivot_longer(), so we can trim the organisation names in LOS_model, which will allow us to do something similar to that data:
-
-LOS_model %>%
-  mutate(Organisation = as.integer(str_replace_all(Organisation, "Trust", ""))) %>%
+```{r}
+stranded_data %>% 
+  select(2:5) %>%
   pivot_longer(everything()) %>%
   display()
 ```
 
-#### `last_col()`
-`last_col()` selects the last column:
+See also `last_col()`, which is another example of a tidyselect helper for specific columns.
 
-```{r warning=T, message=F}
-stranded_data %>%
-  select(last_col()) %>%
-  display()
-```
-
-You can specify an offset. This is zero-indexed, so `last_col()` is equivalent to `last_col(0)`:
-```{r warning=T, message=F}
-stranded_data %>%
-  select(last_col(2)) %>%
-  display()
-```
-
-And you can happily combine this with other ways of selecting columns:
-
-```{r warning=T, message=F}
-stranded_data %>%
-  select(age:last_col(3)) %>%
-  display()
-```
-
-
-### selecting with a function
-#### `where()`
-There's a bit more to explain with `where()` than the other tidyselect helpers. Broadly, `where()` lets us use a function to match columns. Let's start simply. We'll use the base R function `is.character()`. This is simple - it returns `TRUE` when a column (or vector, but not whole tibble) contains character data. Let's look at the stranded.label column in stranded_data:
-
-
-```{r warning=T, message=F}
-is.character(stranded_data$stranded.label)
-```
-
-This should return true. So we can see how we might use is.character as the basis of selecting all the character columns from this data using `where()`.
-
-```{r warning=T, message=F}
-# select all the character columns from stranded_data:
-stranded_data %>% 
-  select(where(is.character)) %>%
-  display()
-```
-
-## summarising data
+## Summarising {.tabset}
 
 This section introduces and explores four dplyr functions. Each of these are important, but their real strength comes from combining them to help summarise data. The functions are:
-
+  
 + `group_by()`, which puts our data into groups
 + `summarise()`, which gives us ways of summarising our data
 + `count()`, which (surprise, surprise) counts our data
 + `tally()`, which counts our data in a slightly different way.
 
-Let's start with `group()`. `group()` is an odd function because, at first glance, it doesn't seem to do anything at all:
+We're also going to talk about `rowwise()`, which is a bit of an oddball function for working along rows, rather than the usual column-based approach that we take almost everywhere else in dplyr. The reason we're going to talk about it here is that it's an important tool for producing aggregates along rows (say, an average of several measures).
 
-```{r warning=T, message=F}
+### `group_by()` and `summarise()`
+
+Let's start with `group_by()`. `group_by()` is an odd function because, at first glance, it doesn't seem to do anything at all:
+
+```{r}
 ae_attendances %>% 
   group_by(period) %>%
   display()
 
 ae_attendances %>% 
-  group_by(period) %>%
+  group_by(org_code) %>%
   display()
 ```
 
 However, if we add in `count()` to this code, we start to see what `group_by()` might be doing:
 
-```{r warning=T, message=F}
+```{r}
 ae_attendances %>% 
   count(breaches) %>%
   display()
 
 ae_attendances %>% 
-  group_by(period) %>%
-  count(breaches) %>%
+  group_by(org_code) %>%
+  count(breaches) %>% 
   display()
 ```
 
-In the first case, we've counted up all the rows where breaches = 0, = 1, = 2, and so on. In the second case, this counting has still occurred, but the counts are divided into individual days. This is because we've now grouped the data by period (which contains dates). So `group_by()` doesn't change your data directly. Instead, it changes the description of your data (the meta-data). You can use this meta-data to change how R treats the data. So let's group by org_code to give an overview of breaches by organisation:
-
-```{r warning=T, message=F}
-ae_attendances %>% 
-  group_by(org_code) %>%
-  count(desc(breaches)) %>%
-  arrange(n)
-```
-
-
-```{r}
-# i don't understand count tally and summarise at all well
-
-# count() lets you quickly count the unique values of one or more variables: df %>% count(a, b) is roughly equivalent to df %>% group_by(a, b) %>% summarise(n = n()). count() is paired with tally(), a lower-level helper that is equivalent to df %>% summarise(n = n()). Supply wt to perform weighted counts, switching the summary from n = n() to n = sum(wt).
-starwars %>%
-  count(species)
-#equiv
-starwars %>% group_by(species) %>% summarise(n = n())
-
-# sort option
-starwars %>%
-  count(species, sort=T)
-#equiv
-starwars %>% group_by(species) %>% summarise(n = n()) %>% arrange(desc(n))
-
-# tally doesn't have the grouping
-starwars %>%
-  tally()
-#equiv
-starwars %>% summarise(n = n())
-
-# with wt
-
-starwars %>%
-  tally(wt=mass)
-#equiv
-starwars %>% summarise(n = sum(mass, na.rm=T))
-
-#add_ variants
-starwars %>%
-  add_count(species, name="group_size") %>%
-  select(name, last_col())
-
-# ungrouped tally gives a col with the same value in each row
-starwars %>%
-  add_tally() %>%
-  select(name,last_col())
-
-starwars %>%
-  add_tally(wt=mass, name="total_mass") %>%
-  select(name,mass,last_col()) %>%
-  mutate(percent_of_total_mass = paste0(signif(100 * mass / total_mass, digits=3), "%"))
-
-
-# add_count() and add_tally() are equivalents to count() and tally() but use mutate() instead of summarise() so that they add a new column with group-wise counts.
-
-# summarise() creates a new data frame. It will have one (or more) rows for each combination of grouping variables; if there are no grouping variables, the output will have a single row summarising all observations in the input. It will contain one column for each grouping variable and one column for each of the summary statistics that you have specified.
-```
-
-
-So that gives us the number of days with breaches = 0, = 1, and so on. This is probably a good time to introduce `tally()`, using the same code as above:
+In the first case, we've counted up all the rows where breaches = 0, = 1, = 2, and so on. In the second case, this counting has still occurred, but the counts are divided into individual days. This is because we've now grouped the data by period (which contains dates). So `group_by()` doesn't change your data directly. Instead, it changes the description of your data (the meta-data). You can then use this meta-data to change how R treats the data. So let's group by org_code to give an overview of breaches by organisation:
 
 ```{r}
 ae_attendances %>% 
   group_by(org_code) %>%
-  tally(desc(breaches)) %>%
-  arrange(n)
-
+  count(breaches) %>%
+  arrange(desc(breaches)) %>%
+  display()
 ```
-
-Two important things to note here:
-
-+ `group` doesn't change how the data looks - just how it behaves:
-+ Each call to `summarise()` removes a layer of grouping
+  
+we'll deal with `count()` more fully in the next subsection. One last thing to note here though: `ungroup()` removes groupings:
 
 ```{r}
-
-ae_attendances %>% 
-  summarise(sum(attendances))
-
-ae_attendances %>% 
-  group_by(org_code) %>%
-  summarise(sum(attendances)) %>%
-  summarise(sum(`sum(attendances)`))
-```
-+ `ungroup()` removes grouping
-
-```{r}
-ae_attendances %>% 
-  summarise(sum(attendances))
-
-ae_attendances %>% 
-  group_by(org_code) %>%
-  summarise(sum(attendances))
-
 ae_attendances %>% 
   group_by(org_code) %>%
   ungroup() %>%
-  summarise(sum(attendances))
+  count(breaches) %>%
+  display()
 ```
 
-+ use formulae in summarise
+For now though, we'll look at `summarise()`.
+
+The description on the [dplyr reference page for summarise](https://dplyr.tidyverse.org/reference/summarise.html) is admirably clear:
+
+> summarise() creates a new data frame. It will have one (or more) rows for each combination of grouping variables; if there are no grouping variables, the output will have a single row summarising all observations in the input. It will contain one column for each grouping variable and one column for each of the summary statistics that you have specified.
 
 ```{r}
+ae_attendances %>% 
+  summarise(sum(attendances)) %>%
+  display()
+```
 
+`summarise()` is especially strong in concert with `group_by()`:
+
+```{r}
+ae_attendances %>% 
+  group_by(org_code) %>%
+  summarise(sum(attendances)) %>%
+  display()
+```
+
+Two important things to note here:
+  
++ `group_by` doesn't change how the data looks - just how it behaves:
++ Each call to `summarise()` removes a layer of grouping
+
+```{r}
+ae_attendances %>% 
+  group_by(org_code) %>%
+  summarise(sum(attendances)) %>%
+  summarise(sum(`sum(attendances)`)) %>%
+  display()
+```
+
+And you can build simple formulae inside `summarise()`:
+
+```{r}
 ae_attendances %>% 
   group_by(org_code) %>%
   summarise(total = sum(attendances)) %>%
-  arrange(desc(total))
+  arrange(desc(total)) %>%
+  display()
 
 ae_attendances %>% 
   group_by(org_code) %>%
   summarise(non_admissions = sum(attendances - admissions)) %>%
-  arrange(desc(non_admissions))
+  arrange(desc(non_admissions)) %>%
+  display()
 
 ```
 
 
+### `count()` and `tally()`
 
-### rowwise
+`count()` counts unique values, and is equivalent to using `group_by()` and then `summarise()`:
 
-+ `rowwise()` forms groups per row
+```{r}
+synthetic_news_data %>%
+  count(died) %>%
+  display()
+```
+
+That's roughly equivalent to:
+
+```{r}
+synthetic_news_data %>% 
+  group_by(died) %>% 
+  summarise(n = n())  %>%
+  display()
+```
+
+`tally()` works similarly, except without the `group_by()`:
+
+```{r}
+synthetic_news_data %>% 
+  # group_by(died) %>% 
+  summarise(n = n())  %>%
+  display()
+
+synthetic_news_data %>%
+  tally() %>%
+  display()
+```
+
+Something that's confusing to a beginner is that adding a column name to `tally()` performs a weighted count of that column:
+
+```{r}
+synthetic_news_data %>%
+  tally(age) %>%
+  display()
+```
+
+Roughly equivalent to:
+
+```{r results='markup'}
+synthetic_news_data %>%
+  pull(age) %>%
+  sum()
+```
+
+`count()` has a useful sort option to arrange by group size:
+
+```{r}
+synthetic_news_data %>%
+  count(syst, sort=T) %>%
+  display()
+```
+
+Both `count()` and `tally()` have `add_` variants:
+
+```{r}
+#add_ variants
+synthetic_news_data %>%
+  add_count(syst, name="syst_BP_count") %>%
+  select(syst, last_col()) %>%
+  display()
+```
+
+`add_tally()` gives a col with the same value in each row of a group:
+
+```{r}
+
+synthetic_news_data %>%
+  group_by(died) %>%
+  add_tally() %>%
+  slice(n=1:3) %>%
+  display()
+```
+
+### `rowwise()`
+
+`rowwise()` forms groups per row. For example, we could take the average of the three columns in ae_attendances:
+
+```{r eval=T}
+# to find the daily mean of attendances, breaches, and admissions
+ae_attendances %>% 
+  rowwise() %>%
+  mutate(mean = mean(c(attendances, breaches, admissions))) %>%
+  display()
+```
+
+Compare and contrast with the results we obtain if we omit `rowwise()`, where the mean column contains the averages of the three columns overall, rather than for each date and organisation:
 
 ```{r}
 ae_attendances %>% 
-  rowwise(org_code) %>%
-  summarise(total=sum(c(attendances, breaches, admissions)))
+  mutate(mean=mean(c(attendances, breaches, admissions))) %>%
+  display()
+```
+
+There's also a `c_across()` function to select columns that looks really promising for `rowwise()` work, but bafflingly it is extremely slow here, taking 50x longer than the `mutate()` with a vector of column names in the first code chunk of this section. This is a known issue - particularly for long, narrow, data - https://github.com/tidyverse/dplyr/issues/4953. So this code is switched off and provided here for information only.
+
+```{r eval=F, include=F}
+ae_attendances %>% 
+  rowwise() %>%
+  mutate(mean = mean(c_across(4:6))) %>%
+  display()
+```
+
+## Joins and pivots {.tabset}
+
++ joins = merging two tibbles together in some way, while broadly preserving the structure of each
++ pivots = changing the shape of a tibble (e.g. from wide to narrow) by reworking the columns and the data they contain 
+
+### Joins {.tabset}
+
+To demonstrate how joins work in dplyr, we need to start with some suitable data. We could take take one of the NHSRdatasets, like `ons_mortality`, and split it up by the category_1 column using `group_by()` and then `group_split()`:
+
+```{r}
+ons_mortality_list <- ons_mortality %>%
+  group_by(category_1) %>%
+  group_split()
+```
+
+That gives us a list containing `r length(ons_mortality_list)` tibbles. We can access these like accessing any other list item:
+
+```{r}
+ons_mortality_list[[2]] %>%
+  display()
+```
+
+We'll also set up some extremely simple data using `tribble()` to demonstrate how the joins work:
+
+```{r}
+simple_a <- tribble(
+  ~category, ~value, ~key,
+  "a",5,3,
+  "a",2,7,
+  "a",4,2,
+  "a",8,5,
+  "a",7,1,
+  "a",9,1
+  )
+
+simple_b <- tribble(
+  ~category, ~value, ~key,
+  "b",2,5,
+  "b",7,2,
+  "b",1,8,
+  "b",3,6,
+  "b",2,8,
+  "b",2,14
+  )
 
 ```
+
+To get started with our look at joins, we could do much worse than the first part of the man page, which is nice and clear:
+
+----
+
+*The mutating joins add columns from y to x, matching rows based on the keys:*
+
+  + `inner_join()`: includes all rows in x and y.
+  + `left_join()`: includes all rows in x.
+  + `right_join()`: includes all rows in y.
+  + `full_join()`: includes all rows in x or y.
+
+*If a row in x matches multiple rows in y, all the rows in y will be returned once for each matching row in x.*
+
+----
+
+#### `inner_join()`
+
+`inner_join()` joins the two tibbles by whatever key column you supply using `by=`:
+
+```{r}
+simple_a %>%
+  inner_join(simple_b, by="key") %>%
+  display()
+```
+
+We get all the rows that exist in both tibbles.
+
+#### `left_join()`
+
+```{r}
+simple_a %>%
+  left_join(simple_b, by="key", suffix = c(".a", ".b")) %>%
+  display()
+```
+
+We get all the rows that exist in simple_a, and any that match keys from simple_b. Any 'extra' rows in simple_a are filled in with `NAs`. We've also tweaked the column names in this example, using the `suffix` argument.
+
+#### `right_join()`
+
+```{r}
+simple_a %>%
+  right_join(simple_b, by="key", keep=T) %>%
+  display()
+```
+
+We get all the rows that exist in simple_b, and any that match keys from simple_b, again, filling with NAs where appropriate. Here, we're demonstrating the `keep` argument, which will repeat the column on which we're joining for each of the tibbles.
+
+#### `full_join()`
+
+```{r}
+simple_a %>%
+  full_join(simple_b, by="key") %>%
+  display()
+```
+
+All rows in both tibbles, filling with `NAs` where needed.
+
+## `case_when()` and `mutate()`
