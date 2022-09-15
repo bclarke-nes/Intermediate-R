@@ -1,0 +1,423 @@
+---
+title: "![](img/header.png) Intermediate R"
+author: "Brendan Clarke"
+date: "`r Sys.Date()`"
+always_allow_html: true
+output:
+  html_document: 
+    toc_depth: 2
+    toc_float:
+      collapsed: no
+    fig_height: 2
+  word_document:
+    toc: yes
+    toc_depth: '2'
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+    pandoc_args: ["--extract-media", "."]
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r echo=F, warning=F, message=F}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'markup')
+install.packages(setdiff("pacman", rownames(installed.packages())))
+library("pacman")
+p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang,glue)
+
+```
+
+## current status
+- need ideas about approach
+- ? one example
+- raw code to draft
+
+# tidy evaluation {.tabset}
+
+<!-- Look at `??tidyselect`` especially *Implementing tidyselect interfaces* -->
+
+  <!-- and  -->
+  <!-- dyn-dots {rlang} -->
+  
+  https://dplyr.tidyverse.org/articles/programming.html
+
+It is part of a wider training programme designed as next steps for R users who have moved beyond introductory training. This programme covers:
+
++ iteration
++ functions
++ dplyr
++ purr
+
+This tidyselect training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=[purrr training]) with any queries, comments, or suggestions.
+
+## Introduction
+
+tidyselect = tools for working with columns
+
+data masking = tools for using data as variables
+
+## tidyselect {.tabset}
+
+```{r echo=F}
+# function to set knitr::kable options quickly
+disp_full <- function(df) {
+  df %>% 
+    knitr::kable(format="html", table.attr = "style='width:70%;'")
+}
+
+# function to display head() only and then dis_full
+display <- function(df) {
+  df %>%
+    head() %>%
+    disp_full()
+}
+```
+
+
+Lots of the power in `dplyr` comes from the many ways that you can select columns. In this section, we'll look at tidyselect, which is a series of functions that allow you to specify columns by various  patterns. Not only does this give you lots of ways of simplifying and streamlining your code, but it's also a great way of making your code more portable - so that it works well inside functions, or across different data sets. We'll look at five groups of functions in this section. There's quite a lot to absorb, so I would definitely recommend using the manual pages (using `??tidyselect`) as a reference for this.
+
++ logical operators
+  + `:`, `!`, `&`, `|`, `c()`
++ pattern matching
+  + `starts_with()`
+  + `ends_with()`
+  + `contains()`
+  + `matches()`
+  + `num_range()`
++ match from a character vector
+  + `all_of()`
+  + `any_of()`
++ selection helpers for specific columns
+  + `everything()`
+  + `last_col()`
++ selecting with a function
++ `where()`
+
+We'll use `stranded_data` for this section.
+
+```{r warning=F, message=F}
+stranded_data %>%
+  display()
+```
+
+### logical operators
+```{r warning=F, message=F}
+#might need ggvenn or similar here - it'd be helpful to show the relationships visually
+
+# select ranges using :
+stranded_data %>%
+  select(age:hcop) %>%
+  display()
+
+# complement / not using !
+stranded_data %>%
+  select(!stranded.label) %>%
+  display()
+
+# intersection / and using &
+## to select many columns just specify what you need:
+stranded_data %>%
+  select(stranded.label, hcop, age) %>%
+  display()
+
+# note that & is meant to be used with pattern matching helpers
+stranded_data %>%
+  select(starts_with("m") & ends_with("e")) %>%
+  display()
+
+# union / inclusive or with |
+stranded_data %>%
+  select(starts_with("m") | ends_with("e")) %>%
+  display()
+
+# combining with c()
+## use c() to pass many options to selection helpers
+stranded_data %>%
+  select(!c(stranded.label, hcop, age)) %>%
+  display()
+
+```
+
+### pattern matching {.tabset}
+#### `starts_with()`
+
+```{r warning=F, message=F}
+stranded_data %>%
+  select(starts_with("care")) %>%
+  display()
+```
+
+Default is non-case sensitive
+
+```{r warning=F, message=F}
+
+stranded_data %>%
+  select(starts_with("Care"))  %>%
+  display()
+
+stranded_data %>%
+  select(starts_with("Care", ignore.case = FALSE))  %>%
+  display()
+```
+
+#### `ends_with()`
+
+```{r warning=F, message=F}
+stranded_data %>%
+  select(age, ends_with("care")) %>%
+  display()
+```
+
+Can use many suffixes using `c()`:
+
+```{r warning=F, message=F}
+stranded_data %>%
+  select(ends_with(c("label", "safe", "care"))) %>%
+  display()
+```
+
+These are returned in order:
+
+```{r warning=F, message=F}
+stranded_data %>%
+  select(ends_with(c("care", "label", "safe"))) %>%
+  display()
+```
+
+#### `contains()`
+`contains()` is for strings
+
+```{r warning=F, message=F}
+stranded_data %>%
+  select(age, contains("care")) %>%
+  display()
+```
+
+#### `matches()`
+`matches()` is for regular expressions (regex). This is a way of matching all kinds of strings by specifying a particular pattern. For example, you can use regex to search through some text for all the @nhs.scot email addresses that it contains. In pseudocode, the regex would work like this:
+
++ look for @nhs.scot
++ look back to the start of the word that contains @nhs.scot
++ make sure that the word doesn't contain any forbidden characters
+
+(the regex would look like this - use https://regex101.com/ to help)
+
+As the above probably suggests, regex is extremely powerful, but a bit human-hostile. So I've given a couple of very simple examples below that cover some of the common cases:
+
+```{r warning=F, message=F}
+# match one of a group of letters using []
+# so return cols containing either "med" or "men" with "me[dn]"
+
+stranded_data %>%
+  select(matches("me[dn]"))  %>%
+  display()
+
+#some more examples please
+```
+
+#### `num_range()`
+
+For selecting a group of numbered columns.
+```{r warning=F, message=F}
+# the man page example is a useful introduction:
+billboard %>%
+  select(num_range("wk", 10:15)) %>%
+  display()
+```
+
+This often arises when using `pivot_wider()` to transform data. For example:
+
+```{r warning=F, message=F} 
+# pivot_wider on ons_mortality data
+ons_mortality %>%
+  pivot_wider(names_from = week_no, values_from = counts, names_prefix = "week_") %>%
+  display()
+
+ons_mortality %>%
+  pivot_wider(names_from = week_no, values_from = counts, names_prefix = "week_") %>%
+  select(date, num_range("week_", 20:25)) %>%
+  display()
+
+#specify the number of digits in the range using width=n
+ons_mortality %>%
+  pivot_wider(names_from = week_no, values_from = counts, names_prefix = "week_0") %>%
+  select(date, num_range("week_", 20:25)) %>%
+  display()
+
+ons_mortality %>%
+  pivot_wider(names_from = week_no, values_from = counts, names_prefix = "week_0") %>%
+  select(date, num_range("week_", 20:25, width=3)) %>%
+  display()
+
+```
+
+### matching character vectors
+
+#### `all_of()`
+This function matches all column names in some character vector. This can be very useful if you're working with many different sets of data with predictable column names.
+
+```{r warning=F, message=F} 
+my_columns <- names(stranded_data)[1:4]
+
+my_columns
+
+stranded_data %>%
+  select(all_of(my_columns)) %>%
+  display()
+
+```
+
+As the name suggests, `all_of()` will match all the column names in the vector, and will give you an error if a name in the vector is missing from the column names:
+
+```{r warning=T, message=F} 
+my_columns <- c(my_columns, "smoking_status")
+my_columns
+```
+
+So this code will cause an error:
+
+```{r eval=F, warning=T, message=F} 
+stranded_data %>%
+  select(all_of(my_columns)) %>%
+  display()
+```
+
+#### `any_of()`
+
+`any_of()` will match any column names that appear in the vector, and ignore those that do not:
+
+```{r warning=T, message=F} 
+stranded_data %>%
+  select(any_of(my_columns)) %>%
+  display()
+```
+
+There's a great tip on the `all_of()` man page - `any_of()` is an especially clever way to drop columns from a tibble because calling it more than once does not cause an error:
+
+```{r warning=T, message=F}
+stranded_data %>%
+  select(-any_of(my_columns)) %>%
+  select(-any_of(my_columns)) %>%
+  display()
+```
+
+### selection helpers for specific columns
+#### `everything()`
+
+`everything()` selects all columns. This is less useful in combination with `select()` itself, but simplifies some other functions well - particularly with `pivot_longer()`. 
+
+```{r warning=T, message=F}
+#Using the stock mtcars data here to demonstrate:
+
+mtcars %>% pivot_longer(everything())
+
+# You need the same data types in each column to pivot_longer(), so we can trim the organisation names in LOS_model, which will allow us to do something similar to that data:
+
+LOS_model %>%
+  mutate(Organisation = as.integer(str_replace_all(Organisation, "Trust", ""))) %>%
+  pivot_longer(everything()) %>%
+  display()
+```
+
+#### `last_col()`
+`last_col()` selects the last column:
+
+```{r warning=T, message=F}
+stranded_data %>%
+  select(last_col()) %>%
+  display()
+```
+
+You can specify an offset. This is zero-indexed, so `last_col()` is equivalent to `last_col(0)`:
+```{r warning=T, message=F}
+stranded_data %>%
+  select(last_col(2)) %>%
+  display()
+```
+
+And you can happily combine this with other ways of selecting columns:
+
+```{r warning=T, message=F}
+stranded_data %>%
+  select(age:last_col(3)) %>%
+  display()
+```
+
+
+### selecting with a function
+
+### `where()`
+There's a bit more to explain with `where()` than the other tidyselect helpers. Broadly, `where()` lets us use a function to match columns. Let's start simply. We'll use the base R function `is.character()`. This is simple - it returns `TRUE` when a column (or vector, but not whole tibble) contains character data. Let's look at the stranded.label column in stranded_data:
+
+
+```{r warning=T, message=F}
+is.character(stranded_data$stranded.label)
+```
+
+This should return true. So we can see how we might use is.character as the basis of selecting all the character columns from this data using `where()`.
+
+```{r warning=T, message=F}
+# select all the character columns from stranded_data:
+stranded_data %>% 
+  select(where(is.character)) %>%
+  display()
+```
+
+
+## Data masking {.tabset}
+
+https://rlang.r-lib.org/reference/topic-data-mask.html
+
+The pipe vs base R and specifying variables
+
+Env-varibles (things you create with assignment)
+data-variables (e.g. imported data in a tibble)
+
+For beginners, this distinction is not that important
+And R/tidyverse does lots of helpful blurring
+
+That blurring raises a problem for more advanced users
+
++ data-variable in a function argument = **embracing** with `{{var}}`
++ env-variable in a vector = `.data[[var]]` and `.env[[var]]` pronouns
++ variables in output = `:=`
++ complex cases = quasiquotation with the injection operator `!!`
+
+### embracing
+
+code to function - dplyr will try to find the argument name
+:. embrace the argument
+
+Here's some code to produce a rounded mean of a column in `ae_attendances` in cases where breaches are over 60:
+```{r}
+ae_attendances %>%
+  filter(breaches > 100) %>%
+  pull(attendances) %>%
+  mean() %>%
+  round(2)
+```
+
+Generalised to a two-argument function, this won't work:
+```{r eval=F}
+ae_means <- function(colname, val) {
+  ae_attendances %>%
+    filter(colname > val) %>%
+    pull(attendances) %>%
+    mean() %>%
+    round(2)
+}
+
+ae_means(breaches, 100)
+
+```
+
+The rea
+
+
+
+
+### `.data[[var]]` and `.env[[var]]` pronouns
+https://rlang.r-lib.org/reference/topic-data-mask-ambiguity.html
+
+
