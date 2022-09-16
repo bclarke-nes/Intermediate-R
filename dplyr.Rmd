@@ -22,13 +22,6 @@ editor_options:
 ---
 # Getting the best out of dplyr {.tabset}
 
-**Current status**
-
-+ incomplete - drafting needed
-+ does not knit to pdf - will need to make display functions conditional on knitting to html
-
-----
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'asis')
 install.packages(setdiff("pacman", rownames(installed.packages())))
@@ -61,8 +54,7 @@ In this session, we will cover the following areas:
 2. Investigating data, where look at some dplyr functions that are particularly helpful when looking at a new data set
 3. A brief introduction to tidyselect, where we'll learn some new ways of referencing columns in dplyr. This material is covered in more details in the session on tidy evaluation. We'll also use this section as a refresher on core dplyr functions
 4. A section on summarising data
-5. Joins and pivots
-5. case_when mutate
+5. Joins
 
 You should have at least some previous experience working with dplyr before starting this training. Specifically, you should be familiar with at least:
 
@@ -615,29 +607,17 @@ ae_attendances %>%
   display()
 ```
 
-## Joins and pivots {.tabset}
+## Joins {.tabset}
 
 + joins = merging two tibbles together in some way, while broadly preserving the structure of each
-+ pivots = changing the shape of a tibble (e.g. from wide to narrow) by reworking the columns and the data they contain 
+  + binding = joins where data are added based on position
+  + mutating joins = joins where data are added by values (so matching existing data)
 
-### Joins {.tabset}
+### Binding
 
-To demonstrate how joins work in dplyr, we need to start with some suitable data. We could take take one of the NHSRdatasets, like `ons_mortality`, and split it up by the category_1 column using `group_by()` and then `group_split()`:
+To demonstrate how joins work in dplyr, we need to start with some suitable data. 
 
-```{r}
-ons_mortality_list <- ons_mortality %>%
-  group_by(category_1) %>%
-  group_split()
-```
-
-That gives us a list containing `r length(ons_mortality_list)` tibbles. We can access these like accessing any other list item:
-
-```{r}
-ons_mortality_list[[2]] %>%
-  display()
-```
-
-We'll also set up some extremely simple data using `tribble()` to demonstrate how the joins work:
+We'll set up some extremely simple data using `tribble()` to demonstrate how the joins work:
 
 ```{r}
 simple_a <- tribble(
@@ -662,7 +642,34 @@ simple_b <- tribble(
 
 ```
 
-To get started with our look at joins, we could do much worse than the first part of the man page, which is nice and clear:
+#### `bind_rows()`
+
+```{r}
+simple_a %>%
+  bind_rows(simple_b) %>%
+  display()
+```
+
+By list:
+
+```{r}
+bind_rows(list(simple_a, simple_b)) %>%
+  display()
+```
+
+
+#### bind_cols()
+
+```{r}
+simple_a %>%
+  bind_cols(simple_b) %>%
+  display()
+```
+
+
+### Mutating joins {.tabset}
+
+To get started with mutating joins in dplyr, we could do much worse than the first part of the man page, which is nice and clear:
 
 ----
 
@@ -672,7 +679,8 @@ To get started with our look at joins, we could do much worse than the first par
   + `left_join()`: includes all rows in x.
   + `right_join()`: includes all rows in y.
   + `full_join()`: includes all rows in x or y.
-
+  + `anti_join()`: includes all rows in x that are not in y.
+  
 *If a row in x matches multiple rows in y, all the rows in y will be returned once for each matching row in x.*
 
 ----
@@ -719,4 +727,13 @@ simple_a %>%
 
 All rows in both tibbles, filling with `NAs` where needed.
 
-## `case_when()` and `mutate()`
+#### `anti_join()`
+
+```{r}
+simple_a %>%
+  anti_join(simple_b, by="key") %>%
+  display()
+
+```
+
+Only those rows in simple_a that are not present in simple_b.

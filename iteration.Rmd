@@ -4,12 +4,12 @@ author: "Brendan Clarke"
 date: "`r Sys.Date()`"
 always_allow_html: true
 output:
-  html_document:
-    toc: no
+  html_document: 
     toc_depth: 2
-    number_sections: no
     toc_float:
       collapsed: no
+    fig_width: 6
+    fig_height: 2
   word_document:
     toc: yes
     toc_depth: '2'
@@ -28,16 +28,10 @@ library("pacman")
 p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang,glue)
 ```
 
-## current status
-
-- draft needed for output and body sections
-- more explanation in vectorised functions
-- examples
-
 # Iteration {.tabset}
-Norm against using loops in R. Two reasons: performance, and vectorised functions
+There's a bit of a norm against using loops in R. There are a couple of good reasons for this. First, loops can be very slow in R, and writing high-performance code has a perennial appeal. Second, most functions in R are vectorised, meaning that often using a loop is not necessary.
 
-Imperative programming (for loops) has a place - even if a purist might avoid them. Computer time is usually cheaper than analyst time - and loops definitely have some strengths in real-world analysis, particularly when you need to repeatedly apply a non-vectorised functions - like some of the core Rmarkdown functions. And we'll cover some important tips for avoiding the worst of the performance hit that iteration can cause to your work.
+However, imperative programming using for loops definitely has a place - even if a purist might avoid them. Computer time is usually cheaper than analyst time - and loops definitely have some strengths in real-world analysis, particularly when you need to repeatedly apply a non-vectorised functions, like some of the core Rmarkdown functions. So this training will give you a basic introduction to writing good loops in R, and we'll cover some important tips for avoiding the worst of the performance hit that iteration can cause to your work.
 
 This training session is part of a wider training programme designed as next steps for R users who have moved beyond introductory training. This programme covers:
 
@@ -50,9 +44,9 @@ This iteration training can be taken as a stand-alone session, or integrated int
 
 ## Introduction
 
-This follows the explanations and code from [R4DS](https://r4ds.had.co.nz/iteration.html#for-loops).
+Once again, this training is influenced by the explanations and code from [R4DS](https://r4ds.had.co.nz/iteration.html#for-loops). It's impossible to recommend this book as a resource too strongly, and a quick read of the iteration chapter will be a useful adjunt to this session.
 
-Note most of this uses base R rather than the tidyverse. This might introduce a bit of unfamiliar code, but we'll explain anything new that crops up, and most of the base R code is pretty straightforward. A couple of examples right away. For some tibble called `df`:
+Note too that there's a bit more base R in this session than most of the KIND Learning Network training. This might introduce a bit of unfamiliar code, but we'll explain anything new that crops up, and most of the base R code is pretty straightforward. A couple of examples right away. For some tibble called `df`:
 
 + `df[[]]`
   + `df[["val"]]` selects the column named `val` 
@@ -126,85 +120,270 @@ words %>%
   knitr::kable()
 ```
 
-### Exercise
+### Exercises
 
-```{r}
-#tweak a loop
+Let's take that first loop, and tweak it. Can you make the loop count from 1 to 10, so that `word` contains 1,2,3...? I've started you off with the original code:
+
+```{r results='asis'}
+word <- ""
+
+x <- 1:10
+
+for (i in seq_along(x)) {
+  word[[i]] <- "iteration is"
+}
+
+cat(word)
 ```
 
-```{r}
-#write your own loop
+
+```{r results='asis'}
+
+```
+
+Can you now reverse the order, so that `word` contains 10,9,8...?
+
+```{r results='asis'}
+
+```
+
+Finally, can you use the `glue()` function so that this function prints the lyrics of "Ten Green Bottles"?
+
+```{r results='asis'}
+
 ```
 
 ## Output
 
-## Sequences
+One reason that many R programmers will avoid writing loops concerns performance. And there are some good reasons that loops in R are rather slower than some of the alternative ways of working. I think the first piece of useful advice here is that performance should be fairly low down on your list of concerns as someone working in R. Computer time is cheap - much cheaper than your time spent optimising performance. Exceptions obviously apply, particularly if you're writing code that will be widely and repeatedly used. That said, there are some quick and easy ways of speeding up code with loops if you need to. The most important lesson here is:
+
++ **never grow your output in the body of the loop**
+
+In this section, we'll also look at benchmarking using `microbenchmark()` as a way of assessing performance. Let's have a very quick look at that now, and then we'll use the same syntax to compare a couple of approaches to building output in loops.
 
 ```{r}
+library(microbenchmark)
 
-# basic sequences
-c(1,2,3,4)
-1:10
-
-# couple of useful built-in sequences
-letters 
-LETTERS
-month.abb
-
-# sequences from tibbles
-# base R
-sort(unique(ae_attendances$org_code))
-
-colnames(ae_attendances)
-
-#tidyverse
-ae_attendances %>%
-  distinct(org_code) %>%
-  pull() %>%
-  sort()
-
-# couple of helper functions for working through sequences
-seq_along(synthetic_news_data) # cycles through the sequence by number
-names(synthetic_news_data) # cycles through the sequence by column name (tibbles / data frames only)
-
-# seq_along() also works with vectors etc
-seq_along(letters)
-
-# best to avoid rownames if at all possible, but there is also rownames(). May be needed if working with odd, transposed, data
-t(synthetic_news_data) %>%
-  rownames()
+mbm <- microbenchmark(multiplication={2*2*2}, addition = {2+2+2+2}, power = 2^3)
+autoplot(mbm)
 
 ```
 
-## Body
+`microbenchmark()` shows processing time for repeated runs of an operation, and then plotting the results. Let's use it to look at the performance of a simple loop:
+
+```{r cache=TRUE}
+mbm <- microbenchmark(loop={
+  
+  x<-1:1000
+  output <- vector("integer", length(x))
+  
+  for (i in seq_along(x)) {
+    output[[i]] <- i^2
+  }
+
+})
+
+autoplot(mbm)
+```
+
+That seems snappy enough - although running it a hundred times for the benchmark does slow down the knitting process, which is why the results for this section are cached.
+
+Now let's compare two versions of the same loop - one which sets the length of the output, then assigns the results to the ith position of the output, and the other which creates an empty vector, and then just collapses each new piece of output to the end of it:
+
+```{r cache=TRUE}
+mbm <- microbenchmark(loop={
+  
+  x<-1:1000
+  output <- vector("integer", length(x)) # an empty vector the same length as our intended output
+
+  for (i in seq_along(x)) {
+    output[[i]] <- i^2
+  }
+
+}, loop_short_output={
+
+  x<-1:1000
+  output_2 <- vector("integer", 0) # just an empty vector
+
+  for (i in seq_along(x)) {
+    output_2 <- c(output_2, i^2)
+  }
+
+})
+
+autoplot(mbm)
+```
+
+The outputs are identical:
+```{r}
+setdiff(output, output_2)
+```
+
+Okay, so in this example the time saved is minimal - a few milliseconds. But when the output is bigger - like iteratively adding rows to a tibble - the time taken to knit your code can be a serious problem. Creating a sensibly-sized container for your output at the start of the loop, and then filling that container by indexing, is simple enough to do, and can help your loops run rapidly.
+
+## Sequences
+
+This section gives some tips for efficiently generating sequences, and then using them safely in loops. The obvious place to start are the base-R methods of using either `c()`, or `:` to produce ranges:
+
+```{r}
+c(1,2,3,4)
+1:10
+```
+
+R also comes with a few useful built-in sequences:
+
+```{r}
+letters 
+LETTERS
+month.abb
+```
+
+A common job is generating a sequence from some data. This can easily be done in base R:
+
+```{r eval=F}
+sort(unique(ae_attendances$org_code)) # giving a sorted list of all values in a column
+```
+(not run here, because it's really long!)
+
+You can also subset this using an index range:
+
+```{r}
+sort(unique(ae_attendances$org_code))[1:10] # giving a sorted list of the first 10 values in a column
+```
+  
+```{r}
+colnames(ae_attendances) # giving column names
+```
+
+As you might expect, the tidyverse versions are easier to understand but rather longer:
+
+```{r}
+synthetic_news_data  %>%
+  distinct(NEWS) %>%
+  pull() %>%
+  sort()
+```
+
+Now that we've covered a few ways of generating sequences, we can also dip into some methods for working through seqeuences, as you might do while setting up your loop. `seq_along()` cycles through a sequence numerically:
+
+```{r}
+seq_along(synthetic_news_data) # cycles through the columns of a tibble
+
+seq_along(letters) # seq_along() also works with vectors etc
+```
+
+You can use `names()` to cycle through sequences by column name:
+```{r}
+names(synthetic_news_data) # cycles through the sequence by column name (tibbles / data frames only)
+```
+
+It's generally best to avoid rownames if at all possible, but there is also a `rownames()` function that might be needed while working with unusual or transposed data:
+
+```{r}
+t(synthetic_news_data) %>%
+  rownames()
+```
 
 ## Vectorised functions
 
-We should try and use vectorised functions
+Most functions in R are vectorised. That means that:
 
++ they can take a vector as input
++ they will then work over that vector, and return a vector as output
+
+That's even the case when we haven't tried to make a function work in a vectorised way. For instance, we can sling together a tiny function:
+
+```{r}
+cube <- function(num) {num ^3}
+```
+
+And then when we call it over a vector, we get vectorised output:
+```{r}
+cube_inputs <- c(3,6,5,4,3)
+cube(cube_inputs)
+```
+
+So what's the problem? Let's fiddle with our `cube()` function:
+
+```{r}
+conditional_cube <- function(num) {
+  if(num %% 2 == 0) {
+    num ^ 3 }
+  else {
+    num ^ 2 }
+}
+```
+
+The updated function works perfectly on single digits:
+
+```{r}
+conditional_cube(3) # should square the input for odd numbers
+conditional_cube(4) # should cube the input for even numbers
+```
+
+This now won't work on a vector:
+
+```{r eval=F}
+conditional_cube(cube_inputs)
+```
+
+`conditional_cube()` is therefore described as a scalar function. There really aren't that many scalar functions in widespread use now, but it's a fairly common (and irritating) little problem to run into while writing your own functions. The part of `conditional_cube()` that's causing a problem for us is the if/then statement.
+
+We can solve this in a couple of different ways:
+
+1. we can use the `Vectorize()` - with a capital V - function as a wrapper for our function:
+
+```{r}
+vector_conditional_cube <- Vectorize(conditional_cube)
+vector_conditional_cube(cube_inputs)
+```
+
+2. we can re-build our function so that it no longer depends on a scalar function. So we can replace `if()`/`else()` with the vectorised `ifelse()`:
+
+```{r}
+ifelse_conditional_cube <- function(num){
+  ifelse(num %% 2 == 0, num^3, num^2 )
+}
+
+ifelse_conditional_cube(cube_inputs)
+```
+
+3. (and the reason for this apparent digression here) we can just loop over the scalar function, and not bother to re-work it at all:
+
+```{r}
+cube_outputs <- vector("double", length(cube_inputs))
+
+for(i in seq_along(cube_inputs)) {
+  cube_outputs[[i]] <- conditional_cube(cube_inputs[[i]])
+}
+
+cube_outputs
+```
+
+Okay, so it seems like writing a loop isn't worth the trouble for a really simple function like `cube()`. Let's use a slightly more complicated function to demonstrate where that trade-off might feel rather different.
+
+Here's our function, `perd()`:
 ```{r}
 perd <- function(x) {
   glue("This value here is {x}")
 }
-
-synthetic_news_data %>%
-  mutate(age = perd(age))
-
-synthetic_news_data %>%
-mutate(age = glue("This value here is {age}"))
-
 ```
 
-Those give identical results - inspect code, not much inside `perd()`.
+Let's try `perd()` out inside `mutate()`:
 
-What happens when we try to use this function across everything?
+```{r}
+synthetic_news_data %>%
+  mutate(age = perd(age))
+```
+
+So what happens when we try to use this function across everything?
 
 ```{r}
 synthetic_news_data %>%
   mutate(across(everything(), perd))
 ```
 
-That works straightforwardly enough. Things get a bit more complicated when we try to add extra arguments to `perd()` though:
+That works straightforwardly enough, even if it ruins our tibble completely. Things get a bit more complicated when we try to add extra arguments to `perd()` though:
 
 ```{r}
 perd_v <- function(var_name, x) {
@@ -212,7 +391,7 @@ perd_v <- function(var_name, x) {
 }
 ```
 
-We can use dplyr's [context dependent expressions](https://dplyr.tidyverse.org/reference/context.html) here
+We can use dplyr's [context dependent expressions](https://dplyr.tidyverse.org/reference/context.html) here:
 
 ```{r}
 synthetic_news_data %>%
@@ -329,8 +508,7 @@ We're going to update the example in this exercise. We want to make the followin
 + instead of plotting the total attendance on a histogram, we want to look at the three types of attendance separately
 + we want to be a bit more ambitious with our table. Can we update the table so that we get a percentage rate for each of the types of admission?
 
-Jigsaw puzzle - working code snippets below. We'll work through assembling them into a working loop.
-
+This is a bit of a jigsaw puzzle. I've put the working code snippets into the chunk below, and we'll work through assembling them into a working loop.
 
 ```{r fig.height=1.5, fig.width=4, results='asis'}
 orgs <- ae_attendances %>%
