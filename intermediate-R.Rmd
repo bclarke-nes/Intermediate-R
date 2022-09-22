@@ -22,8 +22,6 @@ editor_options:
 ---
 # Intermediate R {.tabset}
 
-<!-- This version basically is feature-creeping itself to death. Might well be better as fully modular - one on functions, one on iteration, one on dplyr, one on purrr -->
-
 ```{r pre-setup, message=FALSE, warning=FALSE, echo=F}
 install.packages(setdiff("pacman", rownames(installed.packages())))
 library("pacman")
@@ -33,6 +31,7 @@ p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,str
 ```
 
 ## Introduction
+<!-- Will be the basis for the TURAS page and the GH readme - needs drafting -->
 
 This is an introduction to programming in R.
 
@@ -49,7 +48,7 @@ If you were able to answer these fluently, then great, this training is meant fo
 
 ## What this training will cover
 
-This is a modular training course split into four 90 minute sections. 
+This is a modular training course split into five 90 minute sections. 
 
 - getting the best out of `dplyr` using `NHSRdatasets` as a model system for real-world analysis in R
 - tidy evaluation, building programming skills in the tidyverse

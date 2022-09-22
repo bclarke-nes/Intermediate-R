@@ -21,17 +21,16 @@ editor_options:
 ---
 
 ```{r echo=F, warning=F, message=F}
-knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'markup')
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'asis')
 install.packages(setdiff("pacman", rownames(installed.packages())))
 library("pacman")
 p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang,glue)
-
 ```
 
 ## current status
-- need ideas about approach
-- ? one example
-- raw code to draft
+- introduction not started
+- drafting data masking section 
+- working on exercises
 
 # tidy evaluation {.tabset}
 
@@ -63,123 +62,151 @@ data masking = tools for using data as variables
 # function to set knitr::kable options quickly
 disp_full <- function(df) {
   df %>% 
-    knitr::kable(format="html", table.attr = "style='width:70%;'")
+    knitr::kable()
 }
 
 # function to display head() only and then dis_full
 display <- function(df) {
-  df %>%
+  if(length(df) == 0) {cat("No data to display")}
+  else{
+    df %>%
     head() %>%
     disp_full()
+  }
 }
 ```
 
 
-Lots of the power in `dplyr` comes from the many ways that you can select columns. In this section, we'll look at tidyselect, which is a series of functions that allow you to specify columns by various  patterns. Not only does this give you lots of ways of simplifying and streamlining your code, but it's also a great way of making your code more portable - so that it works well inside functions, or across different data sets. We'll look at five groups of functions in this section. There's quite a lot to absorb, so I would definitely recommend using the manual pages (using `??tidyselect`) as a reference for this.
+Lots of the power in `dplyr` comes from the many ways that you can select columns. In this section, we'll look at tidyselect, which is a series of functions that allow you to specify columns by various  patterns. Not only does this give you lots of ways of simplifying and streamlining your code, but it's also a great way of making your code more portable - so that it works well inside functions, or across different data sets. 
 
-+ logical operators
-  + `:`, `!`, `&`, `|`, `c()`
-+ pattern matching
-  + `starts_with()`
-  + `ends_with()`
-  + `contains()`
-  + `matches()`
-  + `num_range()`
-+ match from a character vector
-  + `all_of()`
-  + `any_of()`
-+ selection helpers for specific columns
-  + `everything()`
-  + `last_col()`
-+ selecting with a function
-+ `where()`
+We'll look at five groups of functions in this section. We'll start with the logical operators (like `!`) that are used across lots of R functions, before moving on to look at the additional functions found in tidyselect. There's quite a lot of information to absorb, so I would definitely recommend both using the manual pages (using `??tidyselect`) as a reference, and making sure that you try these functions out for yourself. Here are the functions that we'll be exploring:
 
-We'll use `stranded_data` for this section.
+```{r echo=F}
+tribble(
+~Type, ~Functions,
+"logical operators", "`:`, `!`, `&`, `⎮`",
+"pattern matching", "`starts_with()`, `ends_with()`, `contains()`, `matches()`, `num_range()`",
+"match from a character vector", "`all_of()`, `any_of()`",
+"selection helpers for specific columns", "`everything()`, `last_col()`",
+"selecting with a function", "`where()`"
+) %>% knitr::kable()
 
-```{r warning=F, message=F}
+```
+
+We'll use `stranded_data` dataset from the `NHSRdatasets` package for this section.
+
+```{r}
 stranded_data %>%
   display()
 ```
 
 ### logical operators
-```{r warning=F, message=F}
-#might need ggvenn or similar here - it'd be helpful to show the relationships visually
 
-# select ranges using :
+As usual, the [R4DS chapter]('https://r4ds.had.co.nz/transform.html?q=&&#logical-operators') is extremely helpful if this is completely new to you. The four operators that we'll introduce here are found all over R, and aren't in any way specific to the tidyverse, so we'll review them very briefly before moving on to the more idiosyncratic aspects of tidyselect. 
+
+`:` allows you to select a range of columns. So to select the second to the fifth columns in the `stranded_data` set by name:
+
+```{r}
 stranded_data %>%
   select(age:hcop) %>%
   display()
+```
 
-# complement / not using !
+Similarly, by index:
+
+```{r}
+stranded_data %>%
+  select(2:5) %>%
+  display()
+```
+
+`!` allows you to select the complement - in other words, everything but the specified column:
+
+```{r}
 stranded_data %>%
   select(!stranded.label) %>%
   display()
+```
 
-# intersection / and using &
-## to select many columns just specify what you need:
+Use `c()` if you want to drop multiple columns using `!`:
+
+```{r}
+stranded_data %>%
+  select(!c(age, stranded.label)) %>%
+  display()
+```
+
+`&` lets you group together selection helpers. If you're selecting many columns by name, `&` isn't needed. Instead, you can just specify what you need to keep:
+
+```{r}
 stranded_data %>%
   select(stranded.label, hcop, age) %>%
   display()
+```
 
-# note that & is meant to be used with pattern matching helpers
+Where `&` is really useful is in combination with pattern matching helpers, which we'll look at in more detail in the next subsection:
+
+```{r}
 stranded_data %>%
   select(starts_with("m") & ends_with("e")) %>%
   display()
+```
 
-# union / inclusive or with |
+`&` returns the columns where both of the patterns are matched. Compare and contrast the `|` operator, which gives the union of both helpers:
+
+```{r}
 stranded_data %>%
   select(starts_with("m") | ends_with("e")) %>%
   display()
-
-# combining with c()
-## use c() to pass many options to selection helpers
-stranded_data %>%
-  select(!c(stranded.label, hcop, age)) %>%
-  display()
-
 ```
 
 ### pattern matching {.tabset}
 #### `starts_with()`
 
-```{r warning=F, message=F}
+`starts_with()` matches columns by string. So to select all the columns that start with "care":
+
+```{r}
 stranded_data %>%
   select(starts_with("care")) %>%
   display()
 ```
 
-Default is non-case sensitive
+By default. `starts_with()` is non-case sensitive:
 
-```{r warning=F, message=F}
-
+```{r}
 stranded_data %>%
   select(starts_with("Care"))  %>%
   display()
+```
 
+You can use the `ignore.case` argument to change this behaviour:
+
+```{r}
 stranded_data %>%
   select(starts_with("Care", ignore.case = FALSE))  %>%
   display()
 ```
 
 #### `ends_with()`
+`ends_with()` works as `starts_with`, except matching the endings of column names:
 
-```{r warning=F, message=F}
+```{r}
 stranded_data %>%
   select(age, ends_with("care")) %>%
   display()
 ```
 
-Can use many suffixes using `c()`:
+We can match a range of endings using `c()`:
 
-```{r warning=F, message=F}
+```{r}
 stranded_data %>%
   select(ends_with(c("label", "safe", "care"))) %>%
   display()
 ```
 
-These are returned in order:
+These are returned in the order they appear inside the `c()`:
 
-```{r warning=F, message=F}
+```{r}
 stranded_data %>%
   select(ends_with(c("care", "label", "safe"))) %>%
   display()
@@ -188,106 +215,134 @@ stranded_data %>%
 #### `contains()`
 `contains()` is for strings
 
-```{r warning=F, message=F}
+```{r}
 stranded_data %>%
   select(age, contains("care")) %>%
   display()
 ```
 
 #### `matches()`
-`matches()` is for regular expressions (regex). This is a way of matching all kinds of strings by specifying a particular pattern. For example, you can use regex to search through some text for all the @nhs.scot email addresses that it contains. In pseudocode, the regex would work like this:
+While `starts_with()` and `ends_with()` match supplied strings, `matches()` uses [regular expressions](https://cran.r-project.org/web/packages/stringr/vignettes/regular-expressions.html) (regex). Regular expressions are a way of matching all kinds of strings by specifying a particular pattern. For example, you can use regex to search through a piece of text for all the @nhs.scot email addresses that it contains. In pseudocode, the regex would work like this:
 
-+ look for @nhs.scot
-+ look back to the start of the word that contains @nhs.scot
++ look for an @
++ look for the start and ends of the word that contains that @
 + make sure that the word doesn't contain any forbidden characters
 
-(the regex would look like this - use https://regex101.com/ to help)
+Getting to grips with regex is a bit forbidding, because the syntax used is very concise and impenetrable. For instance, the above pseudocode translates into:
 
-As the above probably suggests, regex is extremely powerful, but a bit human-hostile. So I've given a couple of very simple examples below that cover some of the common cases:
+> [[:alnum:].-_]+@[[:alnum:].-]+
 
-```{r warning=F, message=F}
-# match one of a group of letters using []
-# so return cols containing either "med" or "men" with "me[dn]"
+Luckily, there are some great tools to help the beginner - such as [regular expressions 101](https://regex101.com/).There are also a few very simple examples below that cover some of the common cases:
 
+Match one of a group of letters using `[]`:
+```{r}
 stranded_data %>%
   select(matches("me[dn]"))  %>%
   display()
 
-#some more examples please
+# returns columns containing either "med" or "men"
+```
+
+To match characters at the start of a word use `^`:
+```{r}
+stranded_data %>%
+  select(matches("^[am]"))  %>%
+  display()
+```
+
+`.` matches any character:
+
+```{r}
+stranded_data %>%
+  select(matches("me."))  %>%
+  display()
+```
+
+To match columns containing a literal full stop use `\\` to escape the character:
+```{r}
+stranded_data %>%
+  select(matches("\\."))  %>%
+  display()
 ```
 
 #### `num_range()`
 
-For selecting a group of numbered columns.
-```{r warning=F, message=F}
-# the man page example is a useful introduction:
+`num_range()` selects a group of numbered columns from a character prefix and a range:
+
+```{r}
+# using the man page example:
 billboard %>%
   select(num_range("wk", 10:15)) %>%
   display()
 ```
 
-This often arises when using `pivot_wider()` to transform data. For example:
+This kind of structure with many predictably-named columns often arises when using `pivot_wider()` to transform data. For example:
 
-```{r warning=F, message=F} 
-# pivot_wider on ons_mortality data
+```{r}
 ons_mortality %>%
   pivot_wider(names_from = week_no, values_from = counts, names_prefix = "week_") %>%
+  select(1:12) %>%
   display()
-
-ons_mortality %>%
-  pivot_wider(names_from = week_no, values_from = counts, names_prefix = "week_") %>%
-  select(date, num_range("week_", 20:25)) %>%
-  display()
-
-#specify the number of digits in the range using width=n
-ons_mortality %>%
-  pivot_wider(names_from = week_no, values_from = counts, names_prefix = "week_0") %>%
-  select(date, num_range("week_", 20:25)) %>%
-  display()
-
-ons_mortality %>%
-  pivot_wider(names_from = week_no, values_from = counts, names_prefix = "week_0") %>%
-  select(date, num_range("week_", 20:25, width=3)) %>%
-  display()
-
 ```
+
+(there's a standard select here for a range of columns to keep our data narrow enough to display on screen. To now select the numbered columns:
+
+```{r}
+ons_mortality %>%
+  pivot_wider(names_from = week_no, values_from = counts, names_prefix = "week_") %>%
+  select(1:12) %>%
+  select(num_range("week_", 1:9)) %>%
+  display()
+```
+
+If your numbered suffixes are not single digit (e.g. week_02 rather than week_2), you can add leading zeros to your range using the `width` argument:
+
+```{r}
+ons_mortality %>%
+  pivot_wider(names_from = week_no, values_from = counts, names_prefix = "week_0") %>%
+  select(num_range("week_", 1:9, width=2)) %>%
+  display()
+```
+
 
 ### matching character vectors
 
 #### `all_of()`
-This function matches all column names in some character vector. This can be very useful if you're working with many different sets of data with predictable column names.
+`all_of()` matches all the column names found in some character vector. This can be very useful if you're working with many different sets of data with predictable column names. Let's set up a vector called `my_columns` to play with
 
-```{r warning=F, message=F} 
+```{r results='markup'}
 my_columns <- names(stranded_data)[1:4]
-
 my_columns
+```
 
+We can now select `all_of` the columns found in `my_columns`:
+```{r}
 stranded_data %>%
   select(all_of(my_columns)) %>%
   display()
-
 ```
 
-As the name suggests, `all_of()` will match all the column names in the vector, and will give you an error if a name in the vector is missing from the column names:
+As the name suggests, `all_of()` will match *all* the column names in the vector, and will give you an error if a name in the vector is missing from the column names. If we update our vector:
 
-```{r warning=T, message=F} 
+```{r results='markup'}
 my_columns <- c(my_columns, "smoking_status")
 my_columns
 ```
 
-So this code will cause an error:
-
-```{r eval=F, warning=T, message=F} 
+`all_of` will now cause an error, because the column `smoking_status` is not found in the data:
+```{r eval=F}
 stranded_data %>%
   select(all_of(my_columns)) %>%
   display()
 ```
 
+We can avoid this kind of error using `any_of`.
+
 #### `any_of()`
 
-`any_of()` will match any column names that appear in the vector, and ignore those that do not:
+As the name suggests, `any_of()` will match any column names that appear in the vector, and ignore those that do not. Using our updated vector of column names from above:
 
-```{r warning=T, message=F} 
+```{r} 
 stranded_data %>%
   select(any_of(my_columns)) %>%
   display()
@@ -295,7 +350,7 @@ stranded_data %>%
 
 There's a great tip on the `all_of()` man page - `any_of()` is an especially clever way to drop columns from a tibble because calling it more than once does not cause an error:
 
-```{r warning=T, message=F}
+```{r}
 stranded_data %>%
   select(-any_of(my_columns)) %>%
   select(-any_of(my_columns)) %>%
@@ -305,59 +360,97 @@ stranded_data %>%
 ### selection helpers for specific columns
 #### `everything()`
 
-`everything()` selects all columns. This is less useful in combination with `select()` itself, but simplifies some other functions well - particularly with `pivot_longer()`. 
+`everything()` selects all columns. This is less useful in combination with `select()` itself, but simplifies some other functions well - particularly with `pivot_longer()`. One of the quirks of `pivot_longer()` is that you need to coerce your data so that the resulting columns don't mix data types. So we'll start with one of the stock R datasets to keep our code simple. Let's have a quick look at that dataset first:
 
-```{r warning=T, message=F}
-#Using the stock mtcars data here to demonstrate:
+```{r}
+mtcars %>%
+  display()
+```
 
-mtcars %>% pivot_longer(everything())
+Now we'll reshape that wide data into a long, narrow, format using `pivot_longer()`:
 
-# You need the same data types in each column to pivot_longer(), so we can trim the organisation names in LOS_model, which will allow us to do something similar to that data:
+```{r}
+mtcars %>% 
+  pivot_longer(everything()) %>%
+  display()
+```
 
+This kind of reshaping is useful when, for example, we want to plot our entire dataset to look at the distribution of the variables: 
+
+```{r fig.height=4, fig.width=6}
+  mtcars %>% 
+  pivot_longer(everything()) %>%
+  ggplot() +
+  geom_histogram(aes(x=value, fill=name)) +
+  facet_wrap(~ name, scales="free") + 
+  theme(legend.position="none")
+```
+
+For our LOS_model data, we'll need to trim the organisation names in LOS_model so that our values column is purely numeric:
+
+```{r}
 LOS_model %>%
   mutate(Organisation = as.integer(str_replace_all(Organisation, "Trust", ""))) %>%
   pivot_longer(everything()) %>%
   display()
 ```
 
-#### `last_col()`
-`last_col()` selects the last column:
+Then we can do the same kind of `facet_wrap()` graph as above:
 
-```{r warning=T, message=F}
+```{r}
+LOS_model %>%
+  select(Age, LOS) %>%
+  pivot_longer(everything()) %>%
+  ggplot() +
+  geom_histogram(aes(x=value, fill=name)) +
+  facet_wrap(~ name, scales="free") + 
+  theme(legend.position="none")
+```
+
+#### `last_col()`
+Finally, `last_col()` selects the last column:
+
+```{r}
 stranded_data %>%
   select(last_col()) %>%
   display()
 ```
 
-You can specify an offset. This is zero-indexed, so `last_col()` is equivalent to `last_col(0)`:
-```{r warning=T, message=F}
+You can also specify an offset. This is zero-indexed, so `last_col()` is equivalent to `last_col(0)`:
+```{r}
 stranded_data %>%
-  select(last_col(2)) %>%
+  select(last_col(2)) %>% # selecting the column two before the last column
   display()
 ```
 
-And you can happily combine this with other ways of selecting columns:
+And you can happily combine `last_col()` with other ways of selecting columns:
 
-```{r warning=T, message=F}
+```{r}
 stranded_data %>%
   select(age:last_col(3)) %>%
   display()
 ```
 
+`last_col()` is more useful than it might appear at first, because the default behaviour of `mutate()` is to create new columns as the last column. This means that you can `mutate`, and then immediately `select` the `last_col()`:
 
-### selecting with a function
+```{r}
+stranded_data %>%
+  mutate(age_months = age * 12) %>%
+  select(last_col(1), last_col()) %>%
+  display()
+```
 
 ### `where()`
 There's a bit more to explain with `where()` than the other tidyselect helpers. Broadly, `where()` lets us use a function to match columns. Let's start simply. We'll use the base R function `is.character()`. This is simple - it returns `TRUE` when a column (or vector, but not whole tibble) contains character data. Let's look at the stranded.label column in stranded_data:
 
 
-```{r warning=T, message=F}
+```{r results='markup'}
 is.character(stranded_data$stranded.label)
 ```
 
 This should return true. So we can see how we might use is.character as the basis of selecting all the character columns from this data using `where()`.
 
-```{r warning=T, message=F}
+```{r}
 # select all the character columns from stranded_data:
 stranded_data %>% 
   select(where(is.character)) %>%
@@ -367,30 +460,88 @@ stranded_data %>%
 
 ## Data masking {.tabset}
 
-https://rlang.r-lib.org/reference/topic-data-mask.html
+### Introduction
 
-The pipe vs base R and specifying variables
+More so than in other programming languages, R functions bias towards helping the user do common tasks easily. One excellent example is the way that tidyverse functions (like dplyr) make assumptions about what users mean when they refer to variables. As an example:
 
-Env-varibles (things you create with assignment)
-data-variables (e.g. imported data in a tibble)
+```{r}
+stranded_data %>% 
+  select(age) %>%
+  display()
+```
 
-For beginners, this distinction is not that important
-And R/tidyverse does lots of helpful blurring
+When we specify the age column in this select function, we don't need to tell R that we specifically mean the age column in the `stranded_data` tibble. That's very helpful, because it saves us having to specify that we want to refer to a specific column in a specific tibble each time we write a line of dplyr. Even if we create another tibble that also has an age column...
 
-That blurring raises a problem for more advanced users
+```{r}
+new_stranded_data <- stranded_data %>%
+  select(stranded.label, age)
+```
+
+... we can still just refer to the age column of the original `stranded_data` without any risk of confusion. That simplification is a great advantage of using the pipe, and most of the time it just works without giving rise to any problems at all. For example, we can write a vector of column names, and then pass it to `select()`, and R will figure out that we want to use those names as column names without any extra effort on our part:
+
+```{r}
+my_cols <- c("age", "care.home.referral", "medicallysafe")
+
+stranded_data %>%
+  select(any_of(my_cols)) %>%
+  display()
+
+```
+
+That means that cases where this sort of code doesn't work properly can be enormously frustrating, because most of the time we don't have to think about what are code is really doing very often at all. Here's an example of such a problem:
+
+```{r}
+column_displayer <- function(col_name) {
+  stranded_data %>%
+  select(any_of(col_name)) %>%
+  display()
+}
+```
+
+If we try to use this `column_displayer()` function in the normal way (by calling `column_displayer(age)`), we'll receive an error. Okay, so we can dodge this error in this case by quoting the column name when we supply it as an argument:
+
+```{r}
+column_displayer("age")
+```
+
+But this way leads to trouble when we want to, for instance, use that function inside another function. But a better work-around is to adjust our function code in the first place, so that we don't have to call one particular function in a non-standard way (why write *age* in some functions, but *"age"* in others to refer to the same thing).
+
+In this section, we'll give a bit of helpful theoretical background. We'll then go to look at four ways of avoiding some of the difficulties that R's usual assistance causes.
+
+### Background
+
+The [rlang page on data-masking](https://rlang.r-lib.org/reference/topic-data-mask.html) is very helpful here in setting out a key distinction between kinds of variables that we've previously been using synonymously:
+
++ env-variables (things you create with assignment)
++ data-variables (e.g. imported data in a tibble)
+
+For beginners, this distinction is not that important, particularly because tidyverse functions do lots of helpful blurring. For example, in many base-R cases, you'd specify a data variable differently from an environment variable:
+
+```{r eval=F}
+mtcars$cyl # a data variable
+cyl <- c(4,6,8) # an environment variable
+```
+
+vs
+
+```{r eval=F}
+mtcars %>%
+  select(cyl) # specifying a data variable like an environment variable inside select
+```
+
+When you start wanting to include tidyverse functions inside other functions, that blurring raises a problem. We won't give much of an explanation as to the reasons for this, but will instead concentrate on four strategies for resolving these kind of data masking problems.
 
 + data-variable in a function argument = **embracing** with `{{var}}`
-+ env-variable in a vector = `.data[[var]]` and `.env[[var]]` pronouns
-+ variables in output = `:=`
-+ complex cases = quasiquotation with the injection operator `!!`
++ env-variable in a vector = `.data[[var]]` and `.env[[var]]` **pronouns**
++ variables in output = **`:=`**
++ complex cases = **quasiquotation** with the injection operator `!!`
 
-### embracing
+### Embracing
 
-code to function - dplyr will try to find the argument name
-:. embrace the argument
+If you want to use a data variable in the argument of a function, you need to ``{{embrace}}`` the argument.
 
-Here's some code to produce a rounded mean of a column in `ae_attendances` in cases where breaches are over 60:
-```{r}
+Here's some code to produce a rounded mean of a column in `ae_attendances` in cases where breaches are over 100:
+```{r results='markup'}
 ae_attendances %>%
   filter(breaches > 100) %>%
   pull(attendances) %>%
@@ -398,26 +549,59 @@ ae_attendances %>%
   round(2)
 ```
 
-Generalised to a two-argument function, this won't work:
-```{r eval=F}
-ae_means <- function(colname, val) {
+We can generalise this to a function, which won't work properly:
+
+```{r results='markup', eval=F}
+ae_means <- function(colname) {
   ae_attendances %>%
-    filter(colname > val) %>%
-    pull(attendances) %>%
+    filter(breaches > 100) %>%
+    pull(colname) %>%
     mean() %>%
     round(2)
 }
+```
 
-ae_means(breaches, 100)
+However, if we embrace the argument in the `pull()` call:
+
+```{r results='markup'}
+ae_means <- function(colname) {
+  ae_attendances %>%
+    filter(breaches > 100) %>%
+    pull({{colname}}) %>%
+    mean() %>%
+    round(2)
+}
+```
+
+We can use that new function in a standard way:
+```{r results='markup'}
+ae_means(breaches)
+ae_means(admissions)
+
+map(ae_attendances %>% select(where(is.numeric)) %>% names(), ae_means)
+```
+
+#### Exercise
+
+Take the `ae_means` function, update it so that we can specify:
++ different values for the `filter` cut-off
++ and different columns to apply that cut-off to
++ then use the supplied `pmap` code to test your function on the supplied tibble `testo`
+
+```{r results='markup'}
+
+testo <- expand_grid(c("breaches", "admissions", "attendances"), c("attendances"), 5^(0:3))
+
+#pmap(testo, ~ ae_means(..1, ..2, ..3))
 
 ```
 
-The rea
 
-
-
-
-### `.data[[var]]` and `.env[[var]]` pronouns
+### Pronouns
 https://rlang.r-lib.org/reference/topic-data-mask-ambiguity.html
 
+`.data[[var]]` and `.env[[var]]` p
 
+### `:=`
+
+### `quasiquotation`
