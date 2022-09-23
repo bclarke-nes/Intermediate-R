@@ -22,24 +22,21 @@ editor_options:
 
 ```{r echo=F, warning=F, message=F}
 knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'asis')
-install.packages(setdiff("pacman", rownames(installed.packages())))
+#install.packages(setdiff("pacman", rownames(installed.packages())))
 library("pacman")
 p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang,glue)
 ```
 
 ## current status
-- introduction not started
-- drafting data masking section 
-- working on exercises
+- draft needed on quasiquotation 
+- working on / thinking about exercises
 
 # tidy evaluation {.tabset}
 
-<!-- Look at `??tidyselect`` especially *Implementing tidyselect interfaces* -->
+Tidy evaluation is a [tidyverse-specific approach to programming](https://dplyr.tidyverse.org/articles/programming.html). This training session introduces two different elements of tidy evaluation:
 
-  <!-- and  -->
-  <!-- dyn-dots {rlang} -->
-  
-  https://dplyr.tidyverse.org/articles/programming.html
++ tidyselect, which are tidyverse-specific tools for working with columns
++ data masking, which are tools for using data as variables, and vice versa
 
 It is part of a wider training programme designed as next steps for R users who have moved beyond introductory training. This programme covers:
 
@@ -50,28 +47,16 @@ It is part of a wider training programme designed as next steps for R users who 
 
 This tidyselect training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=[purrr training]) with any queries, comments, or suggestions.
 
-## Introduction
-
-tidyselect = tools for working with columns
-
-data masking = tools for using data as variables
-
 ## tidyselect {.tabset}
 
 ```{r echo=F}
-# function to set knitr::kable options quickly
-disp_full <- function(df) {
-  df %>% 
-    knitr::kable()
-}
-
-# function to display head() only and then dis_full
+# function to display head() using kable()
 display <- function(df) {
-  if(length(df) == 0) {cat("No data to display")}
+  if(nrow(df) == 0) {cat("No data to display")}
   else{
     df %>%
     head() %>%
-    disp_full()
+    knitr::kable()
   }
 }
 ```
@@ -84,7 +69,7 @@ We'll look at five groups of functions in this section. We'll start with the log
 ```{r echo=F}
 tribble(
 ~Type, ~Functions,
-"logical operators", "`:`, `!`, `&`, `⎮`",
+"logical operators", "`:`, `!`, `&`, and |",
 "pattern matching", "`starts_with()`, `ends_with()`, `contains()`, `matches()`, `num_range()`",
 "match from a character vector", "`all_of()`, `any_of()`",
 "selection helpers for specific columns", "`everything()`, `last_col()`",
@@ -477,7 +462,7 @@ new_stranded_data <- stranded_data %>%
   select(stranded.label, age)
 ```
 
-... we can still just refer to the age column of the original `stranded_data` without any risk of confusion. That simplification is a great advantage of using the pipe, and most of the time it just works without giving rise to any problems at all. For example, we can write a vector of column names, and then pass it to `select()`, and R will figure out that we want to use those names as column names without any extra effort on our part:
+... we can still just refer to the age column of the original `stranded_data` without any risk of confusion. This simplification - which we'll call **data masking** - is a great advantage of using the pipe, and most of the time data masking just works without giving rise to any problems at all. For example, we can write a vector of column names, and then pass it to `select()`, and R will figure out that we want to use those names as column names without any extra effort on our part:
 
 ```{r}
 my_cols <- c("age", "care.home.referral", "medicallysafe")
@@ -488,7 +473,7 @@ stranded_data %>%
 
 ```
 
-That means that cases where this sort of code doesn't work properly can be enormously frustrating, because most of the time we don't have to think about what are code is really doing very often at all. Here's an example of such a problem:
+That means that cases where data masking goes wrong can be enormously frustrating, because most of the time we don't have to think about what are code is *really* doing very often at all. Here's an example of such a problem in a function that picks a specified column from `stranded_data` and displays it:
 
 ```{r}
 column_displayer <- function(col_name) {
@@ -504,9 +489,9 @@ If we try to use this `column_displayer()` function in the normal way (by callin
 column_displayer("age")
 ```
 
-But this way leads to trouble when we want to, for instance, use that function inside another function. But a better work-around is to adjust our function code in the first place, so that we don't have to call one particular function in a non-standard way (why write *age* in some functions, but *"age"* in others to refer to the same thing).
+But this way leads to trouble when we want to, for instance, use that function inside another function. So a better work-around is to adjust our function code in the first place, so that we don't have to call one particular function in a non-standard way (why write *age* in some functions, but *"age"* in others to refer to the same thing).
 
-In this section, we'll give a bit of helpful theoretical background. We'll then go to look at four ways of avoiding some of the difficulties that R's usual assistance causes.
+In this section, we'll give a bit of helpful theoretical background about data masking. We'll then go to look at four ways of resolving some of the difficulties that data masking can cause.
 
 ### Background
 
@@ -515,32 +500,38 @@ The [rlang page on data-masking](https://rlang.r-lib.org/reference/topic-data-ma
 + env-variables (things you create with assignment)
 + data-variables (e.g. imported data in a tibble)
 
-For beginners, this distinction is not that important, particularly because tidyverse functions do lots of helpful blurring. For example, in many base-R cases, you'd specify a data variable differently from an environment variable:
+For beginners, this distinction is not that important, particularly because tidyverse functions do lots of helpful blurring between these different types of variable. Note that base-R functions do often require this distinction such that you specify a data variable differently from an environment variable:
 
 ```{r eval=F}
 mtcars$cyl # a data variable
 cyl <- c(4,6,8) # an environment variable
 ```
 
-vs
+Whereas in tidyverse, you can:
 
 ```{r eval=F}
 mtcars %>%
   select(cyl) # specifying a data variable like an environment variable inside select
 ```
 
-When you start wanting to include tidyverse functions inside other functions, that blurring raises a problem. We won't give much of an explanation as to the reasons for this, but will instead concentrate on four strategies for resolving these kind of data masking problems.
+Most of the time, data masking doesn't cause any problems. However, when you start wanting to include tidyverse functions inside other functions, that blurring raises a problem. We won't give much of an explanation as to the reasons for this, although do read [this introduction to the topic](https://rlang.r-lib.org/reference/topic-data-mask.html) and [this more detailed account](https://rlang.r-lib.org/reference/topic-data-mask-ambiguity.html). Here, we'll concentrate on four strategies for resolving these kind of data masking problems:
 
-+ data-variable in a function argument = **embracing** with `{{var}}`
-+ env-variable in a vector = `.data[[var]]` and `.env[[var]]` **pronouns**
-+ variables in output = **`:=`**
-+ complex cases = **quasiquotation** with the injection operator `!!`
+```{r echo=F}
+tribble(
+  ~Problem, ~Solution,
+  "data-variable in a function argument", "**embracing** with `{{var}}`",
+  "env-variable in a vector", "`.data[[var]]` and `.env[[var]]` **pronouns**", 
+  "variables in output", "**injection** with **`:=`**",
+  "complex cases", "**quasiquotation** with the injection operator `!!`"
+) %>% knitr::kable()
+
+```
+
 
 ### Embracing
 
-If you want to use a data variable in the argument of a function, you need to ``{{embrace}}`` the argument.
+If you want to use a data variable in the argument of a function, you need to ``{{embrace}}`` the argument. Here's some code to produce a rounded mean of a column in `ae_attendances` in cases where breaches are over 100:
 
-Here's some code to produce a rounded mean of a column in `ae_attendances` in cases where breaches are over 100:
 ```{r results='markup'}
 ae_attendances %>%
   filter(breaches > 100) %>%
@@ -574,12 +565,15 @@ ae_means <- function(colname) {
 ```
 
 We can use that new function in a standard way:
+
 ```{r results='markup'}
 ae_means(breaches)
 ae_means(admissions)
 
 map(ae_attendances %>% select(where(is.numeric)) %>% names(), ae_means)
 ```
+
+Slightly confusingly, this practice is also referred to as ["tunneling" data variables](https://www.tidyverse.org/blog/2020/02/glue-strings-and-tidy-eval/).
 
 #### Exercise
 
@@ -598,10 +592,103 @@ testo <- expand_grid(c("breaches", "admissions", "attendances"), c("attendances"
 
 
 ### Pronouns
-https://rlang.r-lib.org/reference/topic-data-mask-ambiguity.html
 
-`.data[[var]]` and `.env[[var]]` p
+If you want to use an variable that comes from a character vector, then use **pronouns**. Pronouns allow you to specify how a variable should be interpreted. If we create an atomic vector:
 
-### `:=`
+```{r}
+variable <- c("type")
+```
 
-### `quasiquotation`
+We might then try to use this variable inside `count()`:
+```{r eval=F}
+ae_attendances %>%
+  count(variable) %>%
+  display()
+```
+
+However, that produces an error that reads (in part)
+
+> X Column `variable` is not found.
+
+If we now add the `.data[[]]` pronoun:
+
+```{r}
+ae_attendances %>%
+  count(.data[[variable]]) %>% 
+  display()
+```
+
+The `.env[[]]` pronoun works in a similar way. Imagine that we happen to have an env-variable that shares the name of one of our data-variables:
+
+```{r}
+attendances <- 800
+```
+
+If we try to use it to filter our data, we'll run into a problem:
+
+````{r}
+ae_attendances %>%
+  filter(breaches >= attendances) %>% 
+  display()
+```
+
+(this is based on an actual problem I manufactured for myself while writing the functions training)
+
+This gives an unexpected result, because there are definitely cases where we have more than 800 breaches (something like `r nrow(ae_attendances %>% filter(breaches >= 800))` cases). And what's going on here is that there's an ambiguity - which `attendances` do we mean? This is where pronouns come in, by allowing us to be precise about where the variable is coming from:
+
+```{r}
+ae_attendances %>%
+  filter(.data[["breaches"]] >= .env[["attendances"]]) %>% 
+  arrange(breaches) %>%
+  display()
+```
+(you can get away, in this case, without the `.data[[]]`, but included here as an extra example)
+
+
+### Injection
+
+**`:=`** lets you inject variables into your output. For example, to ensure that a new summary column matches a supplied column name:
+
+```{r}
+column <- c("breaches")
+cutoff <- c(400)
+
+ae_attendances %>%
+  filter({{column}} > {{cutoff}}) %>%
+  group_by(type) %>%
+  summarise("mean_{column}" := round(mean(.data[[column]]), 1)) %>% 
+  display()
+```
+
+The column name is created using `glue()` syntax. `glue()` is a neat replacement for base-R tools like `paste0()`:
+
+```{r}
+cat(paste0("This is how we'd include the column (", column, "), and the cutoff (", cutoff, ") in Rmarkdown using `paste0`  \n  \n"))
+
+cat(glue("This is how we'd include the column ({column}), and the cutoff ({cutoff}) in Rmarkdown using `glue`"))
+```
+
+The column name is then injected using the `:=` operator. This can be applied across a range of dplyr functions:
+
+```{r}
+
+new_column_name <- c("Steve")
+ae_attendances %>% 
+  mutate("{new_column_name}" := attendances) %>%
+  display()
+
+ae_attendances %>% 
+  rename("{new_column_name}" := attendances) %>%
+  display()
+
+ae_attendances %>% 
+  group_by(org_code) %>%
+  summarise("{new_column_name}" := n()) %>%
+  arrange(.data[[new_column_name]]) %>%
+  slice(1:10) %>%
+  ggplot() +
+  geom_col(aes(x=org_code, y=.data[[new_column_name]]))
+  
+```
+
+### Quasiquotation
