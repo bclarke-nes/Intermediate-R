@@ -27,10 +27,6 @@ library("pacman")
 p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang,glue)
 ```
 
-## current status
-- draft needed on quasiquotation 
-- working on / thinking about exercises
-
 # tidy evaluation {.tabset}
 
 Tidy evaluation is a [tidyverse-specific approach to programming](https://dplyr.tidyverse.org/articles/programming.html). This training session introduces two different elements of tidy evaluation:
@@ -647,32 +643,43 @@ ae_attendances %>%
 
 ### Injection
 
-**`:=`** lets you inject variables into your output. For example, to ensure that a new summary column matches a supplied column name:
+**`:=`** lets you inject variables into your output. For example, to ensure that the name of a new summary column matches a supplied column name in a function, we can inject the variable into the newly-created column name:
 
 ```{r}
-column <- c("breaches")
-cutoff <- c(400)
+col_means <- function(column, cutoff) {
 
 ae_attendances %>%
   filter({{column}} > {{cutoff}}) %>%
   group_by(type) %>%
   summarise("mean_{column}" := round(mean(.data[[column]]), 1)) %>% 
   display()
+}
+
 ```
 
 The column name is created using `glue()` syntax. `glue()` is a neat replacement for base-R tools like `paste0()`:
 
 ```{r}
+column <- c("breaches")
+cutoff <- 400
+
 cat(paste0("This is how we'd include the column (", column, "), and the cutoff (", cutoff, ") in Rmarkdown using `paste0`  \n  \n"))
 
 cat(glue("This is how we'd include the column ({column}), and the cutoff ({cutoff}) in Rmarkdown using `glue`"))
 ```
 
-The column name is then injected using the `:=` operator. This can be applied across a range of dplyr functions:
+The column name is then injected using the `:=` operator. When we call our `col_means()` function, the supplied column name is injected into the new summary column:
+
+```{r}
+col_means("attendances", 400)
+```
+
+Similar injections can be applied across a range of dplyr functions. We'll demonstrate these below using a vector containing the new column name, but injection is most useful when included as part of a function that you might want to apply across several different aspects of your data:
 
 ```{r}
 
 new_column_name <- c("Steve")
+
 ae_attendances %>% 
   mutate("{new_column_name}" := attendances) %>%
   display()
@@ -692,3 +699,47 @@ ae_attendances %>%
 ```
 
 ### Quasiquotation
+
+Informally, the `:=` operator that we explored in the previous subsection functions as if it were adding quotes around the variable that was passed to it. That means that we could pass a quoted variable to a function, and return the result as expected:
+
+```{r}
+quoted_variable <- "Steve"
+
+ae_attendances %>% 
+  rename("{quoted_variable}" := attendances) %>%
+  display()
+```
+
+What if we also need to use this variable in an unquoted way? For example, say we now want to use `select()` to pick out our `r quoted_variable` column? 
+
+In a function where an argument is supplied quoted, you can unquote it with `!!`:
+
+```{r}
+ae_attendances %>% 
+  rename("{quoted_variable}" := attendances) %>%
+  select(!!quoted_variable) %>%
+  display()
+```
+
+That gives us a useful and clear way of thinking about quasiquotation. To borrow the description from the manual page:
+
+> Quasiquotation is the combination of quoting an expression while allowing immediate evaluation (unquoting) of part of that expression. ([rlang quasiquotation manual page](https://www.rdocumentation.org/packages/rlang/versions/0.2.1/topics/quasiquotation))
+
+And the strength of using quasiquotation is that it grants lots of scope for handling variables in comparatively complicated function. For example, if we want to create a function to take a supplied tibble and column name, and generate a bit of Rmarkdown with a header and summary of that column, quasiquotation (and injection) allow us to wrangle our variables so that they are compatible with the tidyverse functions that we'd like to use:
+
+```{r}
+distinct_entries <- function(df, col_name){
+  
+  cat(glue("#### Results for {col_name}:  \n  \n")) # using glue syntax
+  
+  df %>% 
+    select(!!sym(col_name)) %>% # using quasiquotation to select the supplied column
+    rename("distinct_{col_name}" := col_name) %>% # using injection to rename the column
+    distinct() %>%
+    display()
+}
+
+distinct_entries(ae_attendances, "org_code")
+```
+
+

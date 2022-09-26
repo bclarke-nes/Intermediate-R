@@ -29,9 +29,17 @@ p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,str
 ```
 
 # Iteration {.tabset}
-There's a bit of a norm against using loops in R. There are a couple of good reasons for this. First, loops can be very slow in R, and writing high-performance code has a perennial appeal. Second, most functions in R are vectorised, meaning that often using a loop is not necessary.
+Iteration describes a section of code that is repeatedly run. The best example is a for-loop. For-loops run *for* a set number of repetitions. An example in pseudocode:
 
-However, imperative programming using for loops definitely has a place - even if a purist might avoid them. Computer time is usually cheaper than analyst time - and loops definitely have some strengths in real-world analysis, particularly when you need to repeatedly apply a non-vectorised functions, like some of the core Rmarkdown functions. So this training will give you a basic introduction to writing good loops in R, and we'll cover some important tips for avoiding the worst of the performance hit that iteration can cause to your work.
+```
+for (1 to 10) 
+  run some bit of code here 10 times
+  
+...and move on only when complete
+```
+While for-loops are a basic building-block of many programming languages, they are found infrequently in R. There are a couple of good reasons for this. First, for-loops can be very slow in R, and writing high-performance code has a perennial appeal that surpasses its actual importance in day-to-day data analysis. Second, most functions in R are vectorised (a term we'll explain later). For now, all we need to know is that vectorised functions allow a user to avoid writing for-loops.
+
+However, imperative programming using for-loops definitely has a place, even if a purist might avoid them for performance reasons. Computer time is cheaper than analyst time, and loops definitely have some strengths in real-world analysis. One important strength of for-loops is that they allow you to repeatedly apply a non-vectorised functions elegantly. As some of the core Rmarkdown functions are not vectorised, for-loops are an important part of the Rmarkdown programmer's toolkit. So this training will give you a basic introduction to writing good loops in R, and we'll cover some strategies for avoiding the worst of the performance hit that iteration can cause to your work.
 
 This training session is part of a wider training programme designed as next steps for R users who have moved beyond introductory training. This programme covers:
 
