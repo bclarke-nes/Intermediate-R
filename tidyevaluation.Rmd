@@ -4,14 +4,14 @@ author: "Brendan Clarke"
 date: "`r Sys.Date()`"
 always_allow_html: true
 output:
+  word_document:
+    toc: yes
+    toc_depth: '2'
   html_document: 
     toc_depth: 2
     toc_float:
       collapsed: no
     fig_height: 2
-  word_document:
-    toc: yes
-    toc_depth: '2'
   pdf_document:
     toc: yes
     toc_depth: '2'
@@ -41,7 +41,7 @@ It is part of a wider training programme designed as next steps for R users who 
 + dplyr
 + purr
 
-This tidyselect training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=[purrr training]) with any queries, comments, or suggestions.
+This tidyselect training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=tidyevaluation training) with any queries, comments, or suggestions. You can also find the source code for this training on the [GitHub repository](https://github.com/bclarke-nes/Intermediate-R).
 
 ## tidyselect {.tabset}
 
@@ -213,7 +213,7 @@ Getting to grips with regex is a bit forbidding, because the syntax used is very
 
 > [[:alnum:].-_]+@[[:alnum:].-]+
 
-Luckily, there are some great tools to help the beginner - such as [regular expressions 101](https://regex101.com/).There are also a few very simple examples below that cover some of the common cases:
+Luckily, there are some great tools to help the beginner - such as [the Rstudio cheatsheet](https://raw.githubusercontent.com/rstudio/cheatsheets/main/regex.pdf), or the interactive tool [regular expressions 101](https://regex101.com/).There are also a few very simple examples below that cover some of the common cases:
 
 Match one of a group of letters using `[]`:
 ```{r}

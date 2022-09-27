@@ -44,7 +44,7 @@ This training session is part of a wider training programme designed as next ste
 + dplyr
 + purr
 
-This dplyr training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=[purrr training]) with any queries, comments, or suggestions.
+This dplyr training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=dplyr training) with any queries, comments, or suggestions. You can also find the source code for this training on the [GitHub repository](https://github.com/bclarke-nes/Intermediate-R).
 
 ## Introduction
 
@@ -62,6 +62,8 @@ You should have at least some previous experience working with dplyr before star
 + `filter()`, to select rows from data
 + `mutate()`, to make new columns from existing columns
 + as well as a basic familiarity with using R to manage data
+
+Before we start, [Rstudio's dplyr cheatsheet](https://raw.githubusercontent.com/rstudio/cheatsheets/main/data-transformation.pdf) is extremely helpful to have at hand while learning new functions.
 
 ## NHS-R data {.tabset}
 
@@ -123,15 +125,15 @@ data_describer(synthetic_news_data)
 
 ## Investigating data {.tabset}
 
-The data in the five `NHSRdatasets` package is nicely [tidy](https://cran.r-project.org/web/packages/tidyr/vignettes/tidy-data.html). By this, we mean that:
+Before we start learning some new dplyr functions, we should point out a feature of the data in the five `NHSRdatasets` package. This data is [tidy](https://cran.r-project.org/web/packages/tidyr/vignettes/tidy-data.html). By this, we mean that:
 
 + Every column is a variable.
 + Every row is an observation.
 + Every cell is a single value.
 
-Tidying data is an art of its own. For this training session, though, you can assume that the data that we'll be working with starts off in this tidy format. 
+Tidying data is an art of its own. For this training session, though, you can assume that the data that we'll be working with starts off in this tidy format, and we won't need to do any of this work ourselves. 
 
-We'll start with four functions that are useful when you're investigating new data - `slice()`, `glimpse()`, `rename()` and `relocate()`:
+We'll start with four functions that are especially useful when you're investigating new data - `slice()`, `glimpse()`, `rename()` and `relocate()`:
 
 
 ### `slice()`

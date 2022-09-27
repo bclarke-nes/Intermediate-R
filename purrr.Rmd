@@ -4,13 +4,13 @@ author: "Brendan Clarke"
 date: "`r Sys.Date()`"
 always_allow_html: true
 output:
+  word_document:
+    toc: yes
+    toc_depth: '2'
   pdf_document:
     toc: yes
     toc_depth: '2'
     pandoc_args: ["--extract-media", "."]
-  word_document:
-    toc: yes
-    toc_depth: '2'
   html_document:
     toc: no
     toc_depth: 2
@@ -37,7 +37,7 @@ Purrr is a set of tools for working with functions. This training provides an in
 + tidy evaluation
 + dplyr
 
-This purrr training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=[purrr training]) with any queries, comments, or suggestions.
+This purrr training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=purrr training) with any queries, comments, or suggestions. You can also find the source code for this training on the [GitHub repository](https://github.com/bclarke-nes/Intermediate-R).
 
 ## Introduction
 
