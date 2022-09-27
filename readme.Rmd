@@ -4,6 +4,7 @@ author: "Brendan Clarke"
 date: "`r Sys.Date()`"
 always_allow_html: true
 output:
+  github_document:
   html_document:
     toc: no
     toc_depth: 2
