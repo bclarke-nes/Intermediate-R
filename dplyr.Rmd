@@ -63,11 +63,11 @@ You should have at least some previous experience working with dplyr before star
 + `mutate()`, to make new columns from existing columns
 + as well as a basic familiarity with using R to manage data
 
-Before we start, [Rstudio's dplyr cheatsheet](https://raw.githubusercontent.com/rstudio/cheatsheets/main/data-transformation.pdf) is extremely helpful to have at hand while learning new functions.
+Before we start, [Rstudio's dplyr cheatsheet](https://raw.githubusercontent.com/rstudio/cheatsheets/main/data-transformation.pdf) is helpful to have at hand for quick reference and comparison of functions.
 
 ## NHS-R data {.tabset}
 
-Because dplyr provides tools for working with data, we'll need some suitable data to play with. R comes with lots of interesting data sets built-in (and you can explore these using `data()`), in this training we'll use some health data put together by the [NHS-R community](https://nhsrcommunity.com/). You can find additional explanatory materials for these NHS data sets on [CRAN](https://cran.r-project.org/web/packages/NHSRdatasets/index.html), but the short version is that the `NHSRdatasets` package has 5 data sets:
+Because dplyr provides tools for working with data, we'll need some suitable data to play with. R comes with lots of interesting data sets built-in, and you can explore these using `data()`. In this training we'll use some health data put together by the [NHS-R community](https://nhsrcommunity.com/). You can find additional explanatory materials for these NHS data sets on [CRAN](https://cran.r-project.org/web/packages/NHSRdatasets/index.html), but the short version is that the `NHSRdatasets` package has 5 data sets:
 
 + `ae_attendances` - A+E attendance data
 + `LOS_model` - length of stay data
@@ -92,17 +92,11 @@ data_describer <- function(df) {
 
 }
 
-# function to set knitr::kable options quickly
-disp_full <- function(df) {
-  df %>% 
-    knitr::kable()
-}
-
-# function to display head() only and then dis_full
+# function to save typing head() and kable() hundreds of times
 display <- function(df) {
   df %>%
     head() %>%
-    disp_full()
+    knitr::kable()
 }
 
 ## 5 data sets
@@ -113,7 +107,7 @@ data_describer(ae_attendances)
 #- tidy length of stay data
 data_describer(LOS_model)
 
-#- eng wales mortality data
+#- eng Wales mortality data
 data_describer(ons_mortality)
 
 #- synthetic data for ML models
@@ -144,7 +138,7 @@ At its simplest, `slice()` is an alternative to head:
 ```{r echo=T}
 ae_attendances %>% 
   slice(1:6) %>%
-  disp_full()
+  knitr::kable()
 
 ```
 
@@ -153,12 +147,11 @@ The number supplied to `slice()` returns that row - so `slice(3)` shows the thir
 ```{r echo=T}
 ae_attendances %>% 
   slice(1:3) %>%
-  disp_full()
+  knitr::kable()
 
 ae_attendances %>% 
   slice(2,5,918) %>%
-  disp_full()
-
+  knitr::kable()
 ```
 
 More interestingly, you can `group_by()`, then slice, to see the first row of each group. Here, the data is filtered, grouped by org_code, then we slice the top row of each group:
@@ -168,7 +161,7 @@ ae_attendances %>%
   filter(attendances >= 20000) %>%
   group_by(org_code) %>%
   slice(n=1) %>%
-  disp_full()
+  knitr::kable()
 ```
 
 (we'll explore `group_by()` later in the session, so don't worry if this is new to you)
@@ -178,21 +171,21 @@ The `slice_min()` and `slice_max()` functions are also useful, giving you someth
 ```{r}
 ae_attendances %>%
   slice_max(breaches, n=6) %>%
-  disp_full()
+  knitr::kable()
 
 # equivalent to
 
 ae_attendances %>%
   arrange(desc(breaches)) %>%
   slice(1:6) %>%
-  disp_full()
+  knitr::kable()
 ```
 
 While `slice_sample()` gives a random sampling of the data.
 ```{r}
 ae_attendances %>%
   slice_sample(n=6) %>%
-  disp_full()
+  knitr::kable()
 ```
 
 There are also `slice_head()` and `slice_tail()` functions which work in the same way.
@@ -202,7 +195,28 @@ Final tip - slice with a negative index can be used as like `filter()` to remove
 # returns the last 5 rows only
 ae_attendances %>% 
   slice(-1:-12760) %>%
-  disp_full()
+  knitr::kable()
+```
+
+#### Exercise
+
+Use `slice` on the ons_mortality data to:
+
+Show the 9th row:
+```{r}
+# write your code here
+```
+
+Show the 9th row:
+```{r}
+# write your code here
+```
+
+Select the even-numbered rows:
+```{r}
+# write your code here
+
+# hint - seq()
 ```
 
 
@@ -210,7 +224,7 @@ ae_attendances %>%
 
 + [`glimpse()` manual page](https://dplyr.tidyverse.org/reference/glimpse.html)
 
-`glimpse()` is a data viewing function similar to `print()`, except it transposes the data so that each column is displayed as a row. This is particularly useful for wide data with many columns, especially when you are interested in checking the class (date, character, etc) of your columns.
+`glimpse()` is a data viewing function similar to `print()`, except it transposes the data so that each column is displayed as a row. This is particularly useful for wide data with many columns, especially when you are interested in checking the class (date, character, etc.) of your columns.
 
 ```{r eval=T, results='markup'}
 # glimpse for names and types.
@@ -251,13 +265,38 @@ Like `mutate()`, the general syntax for `rename()` is *new name* = *old name*.
 LOS_model %>%
   rename(age = Age) %>%
   display()
+```
 
+There's not much more to say about the basic `rename()` function beyond that. However, the scoped variant, `rename_with()` does provide some useful additional tools. For example, we can use `tolower()` - which converts strings to all lower-case - to rename multiple columns at once:
+
+```{r}
 LOS_model %>% 
   rename_with(tolower) %>%
   display()
+```
+`rename()` works well with tidyselect operators, which we'll cover briefly during this session. 
+We also have a stand-alone session on [tidy evaluation](https://dplyr.tidyverse.org/articles/programming.html), which covers this territory in more depth.
+
+#### Exercise
+
+Let's borrow some code from the `tolower()` manual page:
+
+```{r}
+capwords <- function(s, strict = FALSE) {
+    cap <- function(s) paste(toupper(substring(s, 1, 1)),
+                  {s <- substring(s, 2); if(strict) tolower(s) else s},
+                             sep = "", collapse = " " )
+    sapply(strsplit(s, split = " "), cap, USE.NAMES = !is.null(names(s)))
+}
+
+capwords(c("owl", "towel"))
+```
+Can you use `capwords()` to convert the synthetic_news_data column headings to title case?
+
+```{r}
+# write your code here
 
 ```
-`rename()` works well with tidyselect operators, which we'll cover briefly during this session. We also have a stand-alone session on [tidy evaluation](https://dplyr.tidyverse.org/articles/programming.html), which covers this territory in more depth.
 
 ### `relocate()`
 
@@ -289,11 +328,12 @@ LOS_model %>%
   display()
 ```
 
+
 ## tidyselect {.tabset}
 
 Lots of the power in `dplyr` comes from the many ways that you can select columns. In this section, we'll look at some examples of tidyselect, which is a series of functions that allow you to specify columns by various  patterns. Not only does this give you lots of ways of simplifying and streamlining your code, but it's also a great way of making your code more portable - so that it works well inside functions, or across different data sets. 
 
-In the tidy evaluation training session, we look across this material in much more depth. There's quite a lot to absorb, so I would definitely recommend using the manual pages (using `??tidyselect`) as a reference for this section.
+In the tidyevaluation training session, we look across this material in much more depth. There's quite a lot to absorb, so I would definitely recommend using the manual pages (using `??tidyselect`) as a reference for this section.
 
 ### `contains()`
 
@@ -312,7 +352,7 @@ stranded_data %>%
   display()
 ```
 
-You can combine the `contains()` statement with other `select()` criteria:
+Note that by default this string matching is case insensitive, so "care" will match columns called "CARE", "Care", and "cArE". You can also combine the `contains()` statement with other `select()` criteria:
 
 ```{r warning=F, message=F}
 stranded_data %>%
@@ -336,7 +376,7 @@ stranded_data %>%
   display()
 ```
 
-And you can negate the contains to give the complement:
+And you can negate the `contains()` to give the complement:
 
 ```{r warning=F, message=F}
 stranded_data %>%
@@ -344,9 +384,21 @@ stranded_data %>%
   display()
 ```
 
+#### Exercise
+
+Here's a vector of partial names of unwanted columns from the synthetic_news_data set. Can you use `contains()` to remove these columns and display the result?
+
+```{r}
+unwanted_names <- substring(names(synthetic_news_data)[seq(1, 11, 2)], 1, 2)
+
+# write your code here.
+
+```
+
+
 ### `any_of()`
 
-`any_of()` matches full column names from a vector of names. Let's set up some names:
+`any_of()` matches **full** column names from a vector of names. Let's set up some names:
 
 ```{r results='markup'} 
 my_columns <- names(stranded_data)[1:4]
@@ -374,10 +426,10 @@ stranded_data %>%
 
 Trying to do something similar using `select()` will cause an error:
 
-```{r eval=F}
-stranded_data %>%
+```{r results='markup'}
+try(stranded_data %>%
   select(-age) %>%
-  select(-age)
+  select(-age))
 ```
 
 ### `everything()`
@@ -503,6 +555,41 @@ ae_attendances %>%
 ```
 
 
+#### Exercise
+
+That's quite a lot of explanation. Let's try some simple group-and-summarise activities at this point.
+
+First, let's take the ons_mortality, which is a bit more complicated than the ae_attendances data we've been using so far. One of the things that makes it complicated is that it has two different classification categories applied. So let's `group_by()` each of the two category variables, and then summarise:
+
+```{r}
+# write your code here
+```
+
+Now that we've found out what each of these two categories contain, let's look at one category in more detail - "Total deaths". First, let's `filter()` that "Total deaths" group out to find out how much data we're dealing with:
+
+```{r}
+# write your code here
+
+```
+
+Still too many to read and make sense of! Let's now `group_by()` category_2, then summarise by summing the count column:
+
+```{r}
+
+```
+
+That gives us a different problem, in that we've summed together the full time period of the two different categories. So let's add a year to the grouping:
+
+```{r}
+
+```
+
+Now that you've got this neat summary data, can you plot it into a column graph using `ggplot()`?
+
+```{r}
+
+```
+
 ### `count()` and `tally()`
 
 `count()` counts unique values, and is equivalent to using `group_by()` and then `summarise()`:
@@ -559,7 +646,7 @@ synthetic_news_data %>%
   display()
 ```
 
-Both `count()` and `tally()` have `add_` variants:
+Both `count()` and `tally()` have `add_` variants, which work like `mutate()` in that they add a new column containing the count:
 
 ```{r}
 #add_ variants
@@ -600,7 +687,7 @@ ae_attendances %>%
   display()
 ```
 
-There's also a `c_across()` function to select columns that looks really promising for `rowwise()` work, but bafflingly it is extremely slow here, taking 50x longer than the `mutate()` with a vector of column names in the first code chunk of this section. This is a known issue - particularly for long, narrow, data - https://github.com/tidyverse/dplyr/issues/4953. So this code is switched off and provided here for information only.
+There's also a `c_across()` function to select columns that looks really promising for `rowwise()` work, but bafflingly it is extremely slow here, taking 50x longer than the `mutate()` with a vector of column names in the first code chunk of this section. This is a known issue - [particularly for long, narrow, data](https://github.com/tidyverse/dplyr/issues/4953). So this code is switched off and provided here for information only - although do feel free to try it out if you don't mind a ten second wait.
 
 ```{r eval=F, include=F}
 ae_attendances %>% 
@@ -611,9 +698,12 @@ ae_attendances %>%
 
 ## Joins {.tabset}
 
-+ joins = merging two tibbles together in some way, while broadly preserving the structure of each
-  + binding = joins where data are added based on position
-  + mutating joins = joins where data are added by values (so matching existing data)
+Joins are where we merge two tibbles together in some way, while broadly preserving the structure of each. There are a couple of variants that we'll introduce in turn:
+
++ **binding joins**, which are joins where data are added based on position. For example, we merge the each of the first columns in the two tibbles into one new first column.
++ **mutating joins**, which are joins where data are added by values to match existing data. For example, we might match two tibbles based on CHI number, and connect two otherwise dissimilar data sets together. 
+
+Let's start with binding joins.
 
 ### Binding
 
@@ -626,52 +716,73 @@ simple_a <- tribble(
   ~category, ~value, ~key,
   "a",5,3,
   "a",2,7,
-  "a",4,2,
-  "a",8,5,
+  # "a",4,2,
+  # "a",8,5,
   "a",7,1,
   "a",9,1
   )
+
+knitr::kable(simple_a)
 
 simple_b <- tribble(
   ~category, ~value, ~key,
   "b",2,5,
   "b",7,2,
-  "b",1,8,
-  "b",3,6,
+  # "b",1,8,
+  # "b",3,6,
   "b",2,8,
   "b",2,14
   )
 
+knitr::kable(simple_b)
 ```
 
 #### `bind_rows()`
 
+`bind_rows()` does exactly what the name describes. It adds the rows of one tibble to another, resulting in one joined tibble containing all the rows:
 ```{r}
 simple_a %>%
   bind_rows(simple_b) %>%
-  display()
+  knitr::kable()
 ```
 
-By list:
-
-```{r}
-bind_rows(list(simple_a, simple_b)) %>%
-  display()
-```
-
-
-#### bind_cols()
+`bind_rows()` will create new columns and fill with NAs if the names of the columns don't match:
 
 ```{r}
 simple_a %>%
-  bind_cols(simple_b) %>%
-  display()
+  rename("wrong_name" = "value") %>%
+  bind_rows(simple_b) %>%
+  knitr::kable()
 ```
 
+And you can create an optional ID column to show where each row originated, which is helpful for debugging:
+
+```{r}
+simple_a %>%
+  bind_rows(simple_b, .id="ID") %>%
+  knitr::kable()
+```
+
+You can also `bind_rows()` by list:
+
+```{r}
+bind_rows(list(simple_a, simple_b)) %>%
+  knitr::kable()
+```
+
+#### bind_cols()
+
+Another function, another descriptive name. `bind_cols()` adds columns to the starting tibble, but otherwise works as `bind_rows()`:
+
+```{r}
+simple_a %>%
+  bind_cols(simple_b, .name_repair="universal") %>%
+  knitr::kable()
+```
 
 ### Mutating joins {.tabset}
 
-To get started with mutating joins in dplyr, we could do much worse than the first part of the man page, which is nice and clear:
+To get started with mutating joins in dplyr, we could do much worse than the [first part of the manual page](https://dplyr.tidyverse.org/reference/mutate-joins.html), which is nice and clear:
 
 ----
 
@@ -689,7 +800,7 @@ To get started with mutating joins in dplyr, we could do much worse than the fir
 
 #### `inner_join()`
 
-`inner_join()` joins the two tibbles by whatever key column you supply using `by=`:
+`inner_join()` joins two tibbles by whichever key column you supply using `by=`:
 
 ```{r}
 simple_a %>%
@@ -697,9 +808,11 @@ simple_a %>%
   display()
 ```
 
-We get all the rows that exist in both tibbles.
+This returns all the rows that exist in both tibbles.
 
 #### `left_join()`
+
+`left_join()` includes all the rows in the first tibble:
 
 ```{r}
 simple_a %>%
@@ -707,9 +820,11 @@ simple_a %>%
   display()
 ```
 
-We get all the rows that exist in simple_a, and any that match keys from simple_b. Any 'extra' rows in simple_a are filled in with `NAs`. We've also tweaked the column names in this example, using the `suffix` argument.
+We get returned the rows that exist in simple_a, and any that match keys from simple_b. Any 'extra' rows in simple_a are filled in with `NAs`. We've also tweaked the column names in this example, using the `suffix` argument.
 
 #### `right_join()`
+
+`right_join()` includes all the rows in the second tibble:
 
 ```{r}
 simple_a %>%
@@ -721,6 +836,8 @@ We get all the rows that exist in simple_b, and any that match keys from simple_
 
 #### `full_join()`
 
+`full_join()` gives us all the rows from all the tibbles:
+
 ```{r}
 simple_a %>%
   full_join(simple_b, by="key") %>%
@@ -730,12 +847,12 @@ simple_a %>%
 All rows in both tibbles, filling with `NAs` where needed.
 
 #### `anti_join()`
+Anti-join is a bit of an outlier, because it returns a smaller tibble than it is supplied with. It returns all the rows of our first tibble that are not present in the second tibble:
 
 ```{r}
 simple_a %>%
   anti_join(simple_b, by="key") %>%
   display()
-
 ```
 
 Only those rows in simple_a that are not present in simple_b.
