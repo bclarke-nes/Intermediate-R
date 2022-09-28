@@ -426,11 +426,10 @@ map2(short_org_codes, "2018", non_admissions_year)
 
 Again, that gives us a list as output - but all the `map()` variants that we discussed earlier will work in exactly the same way. A lovely, and useful, application for this `map2` and friends comes when we find that we'd like to specify how many rows of our .csv files we'd like to skip (perhaps because they have nonsense headers). I've added some of these to the /data/sign_up_2 folder. These are identical to the data files that we loaded using `map_dfr()`, but have a line of gibberish at the start, which we'll need to exclude. Their format is as follows:
 
-`a row of utter nonsense` (some nonsense)
-
-`reg_date,consent,email` (the headers we want)
-
-`01/08/2022,Yes,3357@nhs.scot` (the data we want)
+1. `a row of utter nonsense` (some nonsense)
+2. `reg_date,consent,email` (the headers we want)
+3. `01/08/2022,Yes,3357@nhs.scot` (the data we want)
+4. `...` (more data)
 
 If we try to `map_dfr()` over these files, we'll end up with a problem, because `read_csv()` will assume that all our data is in a single column:
 
@@ -439,7 +438,6 @@ list.files("./data/sign_up_2", full.names = T) %>%
   map_dfr(read_csv) %>%
   head() %>%
   knitr::kable()
-
 ```
 
 Luckily, we can specify a number of rows to skip via the `skip` argument of `read_csv()`. We'll wrap this into a new two-argument function called `labeller_skips()`:
