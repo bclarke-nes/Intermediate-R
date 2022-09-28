@@ -4,14 +4,14 @@ author: "Brendan Clarke"
 date: "`r Sys.Date()`"
 always_allow_html: true
 output:
-  word_document:
-    toc: yes
-    toc_depth: '2'
   html_document: 
     toc_depth: 2
     toc_float:
       collapsed: no
     fig_height: 2
+  word_document:
+    toc: yes
+    toc_depth: '2'
   pdf_document:
     toc: yes
     toc_depth: '2'
