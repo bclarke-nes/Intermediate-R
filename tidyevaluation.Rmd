@@ -48,13 +48,14 @@ This tidyselect training can be taken as a stand-alone session, or integrated in
 ```{r echo=F}
 # function to display head() using kable()
 display <- function(df) {
-  if(nrow(df) == 0) {cat("No data to display")}
+  if(nrow(df) == 0 | ncol(df) == 0) {cat("No data to display")}
   else{
     df %>%
     head() %>%
     knitr::kable()
   }
 }
+
 ```
 
 
@@ -80,6 +81,8 @@ We'll use `stranded_data` dataset from the `NHSRdatasets` package for this secti
 stranded_data %>%
   display()
 ```
+
+We're using a little helper function here, `display()`. You can find the code for this in the source - but really it just saves having to write `head() %>% knitr::kable()` every time we want to look at our data.
 
 ### logical operators
 
@@ -163,7 +166,7 @@ stranded_data %>%
 You can use the `ignore.case` argument to change this behaviour:
 
 ```{r}
-stranded_data %>%
+plart <- stranded_data %>%
   select(starts_with("Care", ignore.case = FALSE))  %>%
   display()
 ```
@@ -203,7 +206,7 @@ stranded_data %>%
 ```
 
 #### `matches()`
-While `starts_with()` and `ends_with()` match supplied strings, `matches()` uses [regular expressions](https://cran.r-project.org/web/packages/stringr/vignettes/regular-expressions.html) (regex). Regular expressions are a way of matching all kinds of strings by specifying a particular pattern. For example, you can use regex to search through a piece of text for all the @nhs.scot email addresses that it contains. In pseudocode, the regex would work like this:
+While `starts_with()` and `ends_with()` match supplied strings, `matches()` uses [regular expressions](https://cran.r-project.org/web/packages/stringr/vignettes/regular-expressions.html) (regex). Regular expressions are a way of matching all kinds of strings by specifying a particular pattern. For example, you can use regex to search through a piece of text for all the email addresses that it contains. In pseudocode, the regex would work like this:
 
 + look for an @
 + look for the start and ends of the word that contains that @
@@ -220,9 +223,8 @@ Match one of a group of letters using `[]`:
 stranded_data %>%
   select(matches("me[dn]"))  %>%
   display()
-
-# returns columns containing either "med" or "men"
 ```
+This returns columns containing either "med" or "men". 
 
 To match characters at the start of a word use `^`:
 ```{r}
@@ -266,7 +268,9 @@ ons_mortality %>%
   display()
 ```
 
-(there's a standard select here for a range of columns to keep our data narrow enough to display on screen. To now select the numbered columns:
+(the `select(1:12)` here is just to keep our data narrow enough to display on screen)
+
+To now select the numbered columns:
 
 ```{r}
 ons_mortality %>%
@@ -286,7 +290,7 @@ ons_mortality %>%
 ```
 
 
-### matching character vectors
+### matching character vectors {.tabset}
 
 #### `all_of()`
 `all_of()` matches all the column names found in some character vector. This can be very useful if you're working with many different sets of data with predictable column names. Let's set up a vector called `my_columns` to play with
@@ -311,10 +315,10 @@ my_columns
 ```
 
 `all_of` will now cause an error, because the column `smoking_status` is not found in the data:
-```{r eval=F}
-stranded_data %>%
+```{r results='markup'}
+try(stranded_data %>%
   select(all_of(my_columns)) %>%
-  display()
+  display())
 ```
 
 We can avoid this kind of error using `any_of`.
@@ -338,7 +342,7 @@ stranded_data %>%
   display()
 ```
 
-### selection helpers for specific columns
+### selection helpers for specific columns {.tabset}
 #### `everything()`
 
 `everything()` selects all columns. This is less useful in combination with `select()` itself, but simplifies some other functions well - particularly with `pivot_longer()`. One of the quirks of `pivot_longer()` is that you need to coerce your data so that the resulting columns don't mix data types. So we'll start with one of the stock R datasets to keep our code simple. Let's have a quick look at that dataset first:
@@ -359,7 +363,7 @@ mtcars %>%
 This kind of reshaping is useful when, for example, we want to plot our entire dataset to look at the distribution of the variables: 
 
 ```{r fig.height=4, fig.width=6}
-  mtcars %>% 
+mtcars %>% 
   pivot_longer(everything()) %>%
   ggplot() +
   geom_histogram(aes(x=value, fill=name)) +
@@ -479,15 +483,21 @@ column_displayer <- function(col_name) {
 }
 ```
 
-If we try to use this `column_displayer()` function in the normal way (by calling `column_displayer(age)`), we'll receive an error. Okay, so we can dodge this error in this case by quoting the column name when we supply it as an argument:
+If we try to use this `column_displayer()` function in the normal way, we'll receive an error:
+
+```{r results='markup'}
+try(column_displayer(age))
+```
+
+Okay, so we can dodge this error in this case by quoting the column name when we supply it as an argument:
 
 ```{r}
 column_displayer("age")
 ```
 
-But this way leads to trouble when we want to, for instance, use that function inside another function. So a better work-around is to adjust our function code in the first place, so that we don't have to call one particular function in a non-standard way (why write *age* in some functions, but *"age"* in others to refer to the same thing).
+But this non-standard [kludge](https://en.wiktionary.org/wiki/kludge#English) leads to trouble when we want to, for instance, use `column_displayer()` inside another function. A stronger approach is to adjust our function code in the first place, so that we don't have to call our function in a non-standard way (why write *age* in some functions, but *"age"* in others to refer to the same thing).
 
-In this section, we'll give a bit of helpful theoretical background about data masking. We'll then go to look at four ways of resolving some of the difficulties that data masking can cause.
+In this section, we'll give a bit of helpful theoretical background about data masking. We'll then go on to look at four ways of resolving some of the difficulties that data masking can cause.
 
 ### Background
 
@@ -496,10 +506,10 @@ The [rlang page on data-masking](https://rlang.r-lib.org/reference/topic-data-ma
 + env-variables (things you create with assignment)
 + data-variables (e.g. imported data in a tibble)
 
-For beginners, this distinction is not that important, particularly because tidyverse functions do lots of helpful blurring between these different types of variable. Note that base-R functions do often require this distinction such that you specify a data variable differently from an environment variable:
+For beginners, this distinction is not that important, particularly because tidyverse functions do lots of helpful blurring between these different types of variable. Note that many base R functions do often require the user to bear this distinction in mind. For instance, in base R you would specify a data variable differently from an environment variable:
 
 ```{r eval=F}
-mtcars$cyl # a data variable
+mtcars$cyl      # a data variable
 cyl <- c(4,6,8) # an environment variable
 ```
 
@@ -510,7 +520,7 @@ mtcars %>%
   select(cyl) # specifying a data variable like an environment variable inside select
 ```
 
-Most of the time, data masking doesn't cause any problems. However, when you start wanting to include tidyverse functions inside other functions, that blurring raises a problem. We won't give much of an explanation as to the reasons for this, although do read [this introduction to the topic](https://rlang.r-lib.org/reference/topic-data-mask.html) and [this more detailed account](https://rlang.r-lib.org/reference/topic-data-mask-ambiguity.html). Here, we'll concentrate on four strategies for resolving these kind of data masking problems:
+Most of the time, data masking doesn't cause any problems. However, when you start wanting to include tidyverse functions inside other functions, that blurring raises a problem. We won't give much of an explanation as to the reasons for this, although do read [this introduction to the topic](https://rlang.r-lib.org/reference/topic-data-mask.html) and [this more detailed account](https://rlang.r-lib.org/reference/topic-data-mask-ambiguity.html) if you are interested in the technical aspects. Here, we'll concentrate on four strategies for resolving these kind of data masking problems. These strategies are:
 
 ```{r echo=F}
 tribble(
@@ -538,7 +548,7 @@ ae_attendances %>%
 
 We can generalise this to a function, which won't work properly:
 
-```{r results='markup', eval=F}
+```{r results='markup'}
 ae_means <- function(colname) {
   ae_attendances %>%
     filter(breaches > 100) %>%
@@ -546,6 +556,8 @@ ae_means <- function(colname) {
     mean() %>%
     round(2)
 }
+
+try(ae_means(breaches))
 ```
 
 However, if we embrace the argument in the `pull()` call:
@@ -595,16 +607,12 @@ If you want to use an variable that comes from a character vector, then use **pr
 variable <- c("type")
 ```
 
-We might then try to use this variable inside `count()`:
-```{r eval=F}
-ae_attendances %>%
+We might then try to use this variable inside `count()`, but there are horrors there:
+```{r results='markup'}
+try(ae_attendances %>%
   count(variable) %>%
-  display()
+  display())
 ```
-
-However, that produces an error that reads (in part)
-
-> X Column `variable` is not found.
 
 If we now add the `.data[[]]` pronoun:
 
@@ -630,7 +638,7 @@ ae_attendances %>%
 
 (this is based on an actual problem I manufactured for myself while writing the functions training)
 
-This gives an unexpected result, because there are definitely cases where we have more than 800 breaches (something like `r nrow(ae_attendances %>% filter(breaches >= 800))` cases). And what's going on here is that there's an ambiguity - which `attendances` do we mean? This is where pronouns come in, by allowing us to be precise about where the variable is coming from:
+This gives an unexpected result, because there are *definitely* cases where we have more than 800 breaches. In fact we have something like `r nrow(ae_attendances %>% filter(breaches >= 800))` cases with more than 800 breaches. And what's going on here is that there's an ambiguity - which `attendances` do we mean? This is where pronouns come in, by allowing us to be precise about where the variable is coming from:
 
 ```{r}
 ae_attendances %>%
@@ -665,7 +673,7 @@ cutoff <- 400
 
 cat(paste0("This is how we'd include the column (", column, "), and the cutoff (", cutoff, ") in Rmarkdown using `paste0`  \n  \n"))
 
-cat(glue("This is how we'd include the column ({column}), and the cutoff ({cutoff}) in Rmarkdown using `glue`"))
+cat(glue("This is how we'd include the column ({column}), and the cutoff ({cutoff}) in Rmarkdown using `glue`")) # easier to read
 ```
 
 The column name is then injected using the `:=` operator. When we call our `col_means()` function, the supplied column name is injected into the new summary column:
@@ -681,7 +689,7 @@ Similar injections can be applied across a range of dplyr functions. We'll demon
 new_column_name <- c("Steve")
 
 ae_attendances %>% 
-  mutate("{new_column_name}" := attendances) %>%
+  mutate("{new_column_name}" := round(attendances ^ 0.5, 2) ) %>%
   display()
 
 ae_attendances %>% 
@@ -694,13 +702,14 @@ ae_attendances %>%
   arrange(.data[[new_column_name]]) %>%
   slice(1:10) %>%
   ggplot() +
-  geom_col(aes(x=org_code, y=.data[[new_column_name]]))
+  geom_col(aes(x=org_code, y=.data[[new_column_name]])) +
+  ggtitle(glue("{new_column_name} by org_code"))
   
 ```
 
 ### Quasiquotation
 
-Informally, the `:=` operator that we explored in the previous subsection functions as if it were adding quotes around the variable that was passed to it. That means that we could pass a quoted variable to a function, and return the result as expected:
+Informally, the `:=` operator that we explored in the previous subsection functions behaved *as if* it were adding quotes around the variable that was passed to it. That meant that we could pass a quoted variable to a function, and yet return the result as expected:
 
 ```{r}
 quoted_variable <- "Steve"
