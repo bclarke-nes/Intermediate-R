@@ -1,7 +1,7 @@
 ---
 title: "![](img/header.png) Intermediate R"
 author: "Brendan Clarke"
-date: "`r Sys.Date()`"
+date: "2022-10-22"
 always_allow_html: true
 output:
   html_document: 
@@ -17,8 +17,6 @@ output:
     toc: yes
     toc_depth: '2'
     pandoc_args: ["--extract-media", "."]
-editor_options: 
-  chunk_output_type: console
 ---
 # Getting the best out of dplyr {.tabset}
 
@@ -29,9 +27,15 @@ library("pacman")
 p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang, glue)
 
 # avoiding tidyverse due to memory issues in RStudio Cloud environment 
+
+# function to add new window links
+link<-function(text,url) {
+  target<-c('{target="_blank"}')
+  glue('[{text}]({url}){target}')
+}
 ```
 
-The aim of this session is to do three things with `dplyr`:
+The aim of this session is to do three things with dplyr:
 
 + build your fluency with basic dplyr functionality
 + show some of the similarities of approach across the package, again to help you master the syntax
@@ -44,7 +48,7 @@ This training session is part of a wider training programme designed as next ste
 + dplyr
 + purr
 
-This dplyr training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=dplyr training) with any queries, comments, or suggestions. You can also find the source code for this training on the [GitHub repository](https://github.com/bclarke-nes/Intermediate-R).
+This dplyr training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the `r link("TURAS page", "https://learn.nes.nhs.scot/64644")`, join the `r link("KIND Learning Network", "https://forms.office.com/r/WQdd6HSCEW")` for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=Intermediate R training) with any queries, comments, or suggestions. You can also find the source code for this training on the `r link("GitHub repository", "https://github.com/bclarke-nes/Intermediate-R")`.
 
 ## Introduction
 
@@ -52,7 +56,7 @@ In this session, we will cover the following areas:
 
 1. An introduction to the NHS-R data sets, which are used throughout the rest of this training
 2. Investigating data, where look at some dplyr functions that are particularly helpful when looking at a new data set
-3. A brief introduction to tidyselect, where we'll learn some new ways of referencing columns in dplyr. This material is covered in more details in the session on tidy evaluation. We'll also use this section as a refresher on core dplyr functions
+3. A brief introduction to tidyselect, where we'll learn some new ways of referencing columns in dplyr. We'll also use this section as a refresher on core dplyr functions
 4. A section on summarising data
 5. Joins
 
@@ -61,13 +65,14 @@ You should have at least some previous experience working with dplyr before star
 + `select()`, to select columns from data
 + `filter()`, to select rows from data
 + `mutate()`, to make new columns from existing columns
-+ as well as a basic familiarity with using R to manage data
 
-Before we start, [Rstudio's dplyr cheatsheet](https://raw.githubusercontent.com/rstudio/cheatsheets/main/data-transformation.pdf) is helpful to have at hand for quick reference and comparison of functions.
+You should also have some basic experience of using R to manage data. This training covers lots of different aspects of managing data quite quickly. If this is a completely new topic for you, you might find the [introductory R training](https://learn.nes.nhs.scot/62249){target="_blank"} that we offer more helpful.
+
+Before we start, [Rstudio's dplyr cheatsheet](https://raw.githubusercontent.com/rstudio/cheatsheets/main/data-transformation.pdf){target="_blank"} is helpful to have at hand for quick reference and comparison of functions.
 
 ## NHS-R data {.tabset}
 
-Because dplyr provides tools for working with data, we'll need some suitable data to play with. R comes with lots of interesting data sets built-in, and you can explore these using `data()`. In this training we'll use some health data put together by the [NHS-R community](https://nhsrcommunity.com/). You can find additional explanatory materials for these NHS data sets on [CRAN](https://cran.r-project.org/web/packages/NHSRdatasets/index.html), but the short version is that the `NHSRdatasets` package has 5 data sets:
+Because dplyr provides tools for working with data, we'll need some suitable data to play with. R comes with lots of interesting data sets built-in, which you can explore using `data()`. To try and stick to the health and social care theme of this training though we'll use some health datasets put together by the `r link("NHS-R community", "https://nhsrcommunity.com/")`. You can find additional explanatory materials for these NHS data sets on `r link("CRAN", "https://cran.r-project.org/web/packages/NHSRdatasets/index.html")`, but the short version is that the `NHSRdatasets` package contains five datasets:
 
 + `ae_attendances` - A+E attendance data
 + `LOS_model` - length of stay data
@@ -75,7 +80,7 @@ Because dplyr provides tools for working with data, we'll need some suitable dat
 + `stranded_data` - synthetic data, designed for training machine learning models
 + `synthetic_news_data` - synthetic data about early warning scores, again designed for ML purposes
 
-Let's look at some data from `NHSRdatasets` package below. If you're following the code, you'll see that there are a couple of helper functions to simplify some of the display work here. We'll start to use these datasets in the next section:
+Let's look at these datasets below. If you're following the code, you'll see that there are a couple of helper functions to simplify some of the display work here. We'll start to use these datasets in the next section:
 
 ```{r echo=F}
 
@@ -86,8 +91,8 @@ data_describer <- function(df) {
   # allows us to display the name of the df as a new subsection with a little bit of nicely formatted Rmarkdown  
   df_name <- deparse(substitute(df))
   
-  cat(paste0("  \n### data - ", df_name,"  \n"))
-  cat(paste0("  \n", df_name, " has ", nrow(df), " rows and ", length(df), " columns.  \n  \n"))
+  cat(glue("  \n### {df_name}  \n  \n"))
+  cat(glue("  \n`{df_name}` has {nrow(df)} rows and {length(df)} columns.  \n  \n"))
   display(df)
 
 }
@@ -119,20 +124,18 @@ data_describer(synthetic_news_data)
 
 ## Investigating data {.tabset}
 
-Before we start learning some new dplyr functions, we should point out a feature of the data in the five `NHSRdatasets` package. This data is [tidy](https://cran.r-project.org/web/packages/tidyr/vignettes/tidy-data.html). By this, we mean that:
+Before we start learning some new dplyr functions, we should point out a feature of the data in the five `NHSRdatasets` package. This data is `r link("tidy", "https://cran.r-project.org/web/packages/tidyr/vignettes/tidy-data.html")`. By this, we mean that:
 
 + Every column is a variable.
 + Every row is an observation.
 + Every cell is a single value.
 
 Tidying data is an art of its own. For this training session, though, you can assume that the data that we'll be working with starts off in this tidy format, and we won't need to do any of this work ourselves. 
-
 We'll start with four functions that are especially useful when you're investigating new data - `slice()`, `glimpse()`, `rename()` and `relocate()`:
-
 
 ### `slice()`
 
-+ [`slice()` manual page](https://dplyr.tidyverse.org/reference/slice.html)
++ `r link("slice() manual page", "https://dplyr.tidyverse.org/reference/slice.html")`
 
 At its simplest, `slice()` is an alternative to head:
 ```{r echo=T}
@@ -222,7 +225,7 @@ Select the even-numbered rows:
 
 ### `glimpse()`
 
-+ [`glimpse()` manual page](https://dplyr.tidyverse.org/reference/glimpse.html)
++ `r link("glimpse() manual page", "https://dplyr.tidyverse.org/reference/glimpse.html")`
 
 `glimpse()` is a data viewing function similar to `print()`, except it transposes the data so that each column is displayed as a row. This is particularly useful for wide data with many columns, especially when you are interested in checking the class (date, character, etc.) of your columns.
 
@@ -257,9 +260,9 @@ synthetic_news_data %>%
 
 ### `rename()` (and `rename_with()`)
 
-+ [`rename()` manual page](https://dplyr.tidyverse.org/reference/rename.html)
++ `r link("rename() manual page", "https://dplyr.tidyverse.org/reference/rename.html")`
 
-Like `mutate()`, the general syntax for `rename()` is *new name* = *old name*.
+`rename()` renames columns. Like `mutate()`, the general syntax for `rename()` is *new name* = *old name*.
 
 ```{r}
 LOS_model %>%
@@ -279,9 +282,9 @@ We also have a stand-alone session on [tidy evaluation](https://dplyr.tidyverse.
 
 #### Exercise
 
-Let's borrow some code from the `tolower()` manual page:
+There are lots of useful tools in the stringr package that can be used to change the case of text. However, for this exercise, let's borrow some code from the base-R `tolower()` manual page to create our own `capwords()` function that capitalises words:
 
-```{r}
+```{r results='markup'}
 capwords <- function(s, strict = FALSE) {
     cap <- function(s) paste(toupper(substring(s, 1, 1)),
                   {s <- substring(s, 2); if(strict) tolower(s) else s},
@@ -291,6 +294,7 @@ capwords <- function(s, strict = FALSE) {
 
 capwords(c("owl", "towel"))
 ```
+
 Can you use `capwords()` to convert the synthetic_news_data column headings to title case?
 
 ```{r}
@@ -300,7 +304,7 @@ Can you use `capwords()` to convert the synthetic_news_data column headings to t
 
 ### `relocate()`
 
-+ [`relocate()` manual page](https://dplyr.tidyverse.org/reference/relocate.html)
++ `r link("relocate() manual page", "https://dplyr.tidyverse.org/reference/relocate.html")`
 
 `relocate()` re-arranges the order of columns:
 
@@ -505,7 +509,7 @@ ae_attendances %>%
 
 For now though, we'll look at `summarise()`.
 
-The description on the [dplyr reference page for summarise](https://dplyr.tidyverse.org/reference/summarise.html) is admirably clear:
+The description on the `r link("dplyr reference page for summarise", "https://dplyr.tidyverse.org/reference/summarise.html")` is admirably clear:
 
 > summarise() creates a new data frame. It will have one (or more) rows for each combination of grouping variables; if there are no grouping variables, the output will have a single row summarising all observations in the input. It will contain one column for each grouping variable and one column for each of the summary statistics that you have specified.
 
@@ -575,18 +579,21 @@ Now that we've found out what each of these two categories contain, let's look a
 Still too many to read and make sense of! Let's now `group_by()` category_2, then summarise by summing the count column:
 
 ```{r}
+# write your code here
 
 ```
 
 That gives us a different problem, in that we've summed together the full time period of the two different categories. So let's add a year to the grouping:
 
 ```{r}
+# write your code here
 
 ```
 
 Now that you've got this neat summary data, can you plot it into a column graph using `ggplot()`?
 
 ```{r}
+# write your code here
 
 ```
 
@@ -622,7 +629,7 @@ synthetic_news_data %>%
   display()
 ```
 
-Something that's confusing to a beginner is that adding a column name to `tally()` performs a weighted count of that column:
+A possible source of confusion is that adding a column name to `tally()` performs a **weighted count** of that column:
 
 ```{r}
 synthetic_news_data %>%
@@ -687,9 +694,9 @@ ae_attendances %>%
   display()
 ```
 
-There's also a `c_across()` function to select columns that looks really promising for `rowwise()` work, but bafflingly it is extremely slow here, taking 50x longer than the `mutate()` with a vector of column names in the first code chunk of this section. This is a known issue - [particularly for long, narrow, data](https://github.com/tidyverse/dplyr/issues/4953). So this code is switched off and provided here for information only - although do feel free to try it out if you don't mind a ten second wait.
+There's also a `c_across()` function to select columns that looks really promising for `rowwise()` work, but bafflingly it is extremely slow here, taking 50x longer than the equivalent `mutate()`. This is a known issue - `r link("particularly for long, narrow, data", "https://github.com/tidyverse/dplyr/issues/4953")`. So this code is switched off and provided here for information only - although do feel free to try it out if you don't mind a ten second wait.
 
-```{r eval=F, include=F}
+```{r eval=F, include=T}
 ae_attendances %>% 
   rowwise() %>%
   mutate(mean = mean(c_across(4:6))) %>%
@@ -716,8 +723,7 @@ simple_a <- tribble(
   ~category, ~value, ~key,
   "a",5,3,
   "a",2,7,
-  # "a",4,2,
-  # "a",8,5,
+  "a",4,2,
   "a",7,1,
   "a",9,1
   )
@@ -728,8 +734,7 @@ simple_b <- tribble(
   ~category, ~value, ~key,
   "b",2,5,
   "b",7,2,
-  # "b",1,8,
-  # "b",3,6,
+  "b",3,2,
   "b",2,8,
   "b",2,14
   )
@@ -782,7 +787,7 @@ simple_a %>%
 
 ### Mutating joins {.tabset}
 
-To get started with mutating joins in dplyr, we could do much worse than the [first part of the manual page](https://dplyr.tidyverse.org/reference/mutate-joins.html), which is nice and clear:
+To get started with mutating joins in dplyr, we could do much worse than the `r link("first part of the manual page", "https://dplyr.tidyverse.org/reference/mutate-joins.html")`, which is nice and clear:
 
 ----
 
@@ -800,6 +805,10 @@ To get started with mutating joins in dplyr, we could do much worse than the [fi
 
 #### `inner_join()`
 
+```{r echo=F, fig.align='center'}
+knitr::include_graphics("img/inner.png")
+```
+
 `inner_join()` joins two tibbles by whichever key column you supply using `by=`:
 
 ```{r}
@@ -811,6 +820,10 @@ simple_a %>%
 This returns all the rows that exist in both tibbles.
 
 #### `left_join()`
+
+```{r echo=F, fig.align='center'}
+knitr::include_graphics("img/left.png")
+```
 
 `left_join()` includes all the rows in the first tibble:
 
@@ -824,6 +837,10 @@ We get returned the rows that exist in simple_a, and any that match keys from si
 
 #### `right_join()`
 
+```{r echo=F, fig.align='center'}
+knitr::include_graphics("img/right.png")
+```
+
 `right_join()` includes all the rows in the second tibble:
 
 ```{r}
@@ -836,6 +853,10 @@ We get all the rows that exist in simple_b, and any that match keys from simple_
 
 #### `full_join()`
 
+```{r echo=F, fig.align='center'}
+knitr::include_graphics("img/full.png")
+```
+
 `full_join()` gives us all the rows from all the tibbles:
 
 ```{r}
@@ -847,6 +868,11 @@ simple_a %>%
 All rows in both tibbles, filling with `NAs` where needed.
 
 #### `anti_join()`
+
+```{r echo=F, fig.align='center'}
+knitr::include_graphics("img/anti.png")
+```
+
 Anti-join is a bit of an outlier, because it returns a smaller tibble than it is supplied with. It returns all the rows of our first tibble that are not present in the second tibble:
 
 ```{r}

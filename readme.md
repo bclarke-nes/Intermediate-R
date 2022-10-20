@@ -1,7 +1,7 @@
 ![](img/header.png) Intermediate R
 ================
 Brendan Clarke
-2022-09-27
+2022-10-22
 
 # Intermediate R
 
@@ -26,21 +26,23 @@ Some self-assessment questions might be useful to calibrate these
 expectations. Are you able to answer these questions fairly rapidly and
 with confidence?
 
--   what’s a tibble?
--   what function would you use to load a .csv file?
--   how would you make a new column in a tibble from some other
-    column(s)?
--   how would you draw a simple graph using `ggplot()`?
+- what’s a tibble?
+- what function would you use to load a .csv file?
+- how would you make a new column in a tibble from some other column(s)?
+- how would you draw a simple graph using `ggplot()`?
 
 If you were able to answer these fluently, then great, this training is
 meant for you. If they were a bit beyond your previous experience, then
-you might like to enroll on the KIND Learning Network training [*Dynamic
-Reports in R/Rmarkdown*](https://learn.nes.nhs.scot/62249) as a first
-step in your R journey.
+you might like to enroll on the KIND Learning Network training
+[Introductory R and Rmarkdown](https://learn.nes.nhs.scot/62249) as a
+first step in your R journey.
 
 ## What this training will cover
 
-This is a modular training course split into five 90 minute sections.
+This is a modular training course split into five sessions. Each session
+runs as a small-group training session live on MS Teams, and consists of
+a mixture of explanation, interaction, and live coding. The session
+topics are:
 
 ### 1. Getting the best out of `dplyr`
 
@@ -73,21 +75,24 @@ apply functions to several different kinds of object in R.
 Tidy evaluation is a tidyverse-specific approach to programming. This
 session introduces two different elements of tidy evaluation:
 **tidyselect**, which are tidyverse-specific tools for working with
-columns, and **data masking**, which are tools for using data as
-variables, and vice versa.
+columns, and **data masking**, which are approaches to resolving
+problems encountered when using tidyverse functions in more advanced
+ways.
 
-You can take any combination of the sessions in any order. Of necessity,
-there is some overlap between sessions, but in general they are
-independent and can be mixed-and-matched to suit your interest.
+While the course as a whole has been designed to offer a logical
+progression from the first to the last session, you can take any
+combination of the sessions in any order. Of necessity, there is a bit
+of overlap between sessions, but in general they are independent and can
+be mixed-and-matched to suit your interests.
 
 ## Getting started
 
 ### How does it work?
 
-The training is delivered as a series of live Teams session using
-[Rstudio Cloud](https://rstudio.cloud/).
+The training is delivered as a series of live Teams session using [Posit
+Cloud](https://rstudio.cloud/) (previously known as Rstudio Cloud).
 
-If you’ve never used Rstudio Cloud before, it’s a
+If you’ve never used Posit Cloud before, it’s a
 [SaaS](https://en.wikipedia.org/wiki/Software_as_a_service) version of
 Rstudio in the browser. Note that because it’s a web service, it
 requires you to upload your data to their servers, which might makes it
@@ -95,13 +100,13 @@ unsuitable for production work in health and care owing to information
 governance concerns. That said, it’s an excellent venue for training,
 because it solves many of the difficulties regarding R versions,
 permissions, etc that are a feature of using R on the desktop. It’s also
-very easy to transfer projects from RStudio Cloud to an installed
-version of R, so don’t worry that what you learn here will be tied to
-the cloud forever.
+very easy to transfer projects from Posit Cloud to an installed version
+of R, so don’t worry that what you learn here will be tied to the cloud
+forever.
 
 ### What you’ll need
 
-As RStudio Cloud is a web service, you don’t need a particularly
+As Posit Cloud is a web service, you don’t need a particularly
 up-to-date computer to completed this training. As long as you have a
 reliable internet connection, and are capable of making a video call
 with Microsoft Teams (for the face-to-face part of the training), then
@@ -114,18 +119,19 @@ setup. That way you can run the demonstration in one screen, and the
 Teams call on the other.
 
 You should also, as discussed above, be fairly comfortable with R basics
-before you enrol on this training. Do please get in touch with
-<brendan.clarke2@nhs.scot> to discuss if you are unsure.
+before you enrol on this training. Do please get in touch with [Brendan
+Clarke](mailto:%20brendan.clarke2@nhs.scot?subject=Intermediate%20R%20training)
+to discuss if you are at all unsure.
 
 ### Joining instructions
 
 You’ll need to do a little bit of preparation before the first training
 session, which should take about 15 minutes to complete. Please make
 sure you have completed this before the start of the first session so
-that we can make a prompt start. If you’re new to RStudio Cloud, please
-follow the step-by-step instructions below. If you’ve worked with
-RStudio Cloud before, you can just sign-in to your account at RStudio
-Cloud, create a new project from the GitHub Repository at
+that we can make a prompt start. If you’re new to Posit Cloud, please
+follow the step-by-step instructions below. If you’ve worked with Posit
+Cloud before, you can just sign-in to your account at Posit Cloud, and
+create a new project from the GitHub Repository at
 <https://github.com/bclarke-nes/Intermediate-R>.
 
 It is also possible to complete the training using the desktop version
@@ -139,10 +145,9 @@ very different from this.
 2.  If you have an account, you can log in as normal. Otherwise, please
     create a new account by selecting Get started for free, following
     the steps, and then signing-in
-3.  Once you’ve signed-in to RStudio Cloud, add a new project by
-    clicking New Project \>\> New Project from a Git repository. When
-    prompted, enter the URL
-    <https://github.com/bclarke-nes/Intermediate-R>
+3.  Once you’ve signed-in to Posit Cloud, add a new project by clicking
+    New Project \>\> New Project from a Git repository. When prompted,
+    enter the URL <https://github.com/bclarke-nes/Intermediate-R>
 4.  That will give you a new project containing the files needed for
     this training
 
@@ -150,21 +155,21 @@ very different from this.
 
 ### Aims
 
--   To introduce a series of R/tidyverse tools that are particularly
-    helpful to analysts moving beyond R basics
--   To provide a social learning space to support learners as they
-    develop their skills into these more challenging areas
--   To show how more advanced R techniques can be used in real-world
-    data analysis in health and social care
+- To introduce a series of R/tidyverse tools that are particularly
+  helpful to analysts moving beyond R basics
+- To provide a social learning space to support learners as they develop
+  their skills into these more challenging areas
+- To show how more advanced R techniques can be used in real-world data
+  analysis in health and social care
 
 ### Objectives
 
 By the end of these session, the user should:
 
--   Have developed their understanding of functions, iteration, dplyr,
-    purrr, and tidyevaluation
--   Have connected these new functions to their own work
--   Have participated in social learning during the training sessions,
-    reviewing the code of other trainees
--   Have confidence in reading third-party code that uses some of these
-    advanced R techniques
+- Have developed their understanding of functions, iteration, dplyr,
+  purrr, and tidyevaluation
+- Have connected these new functions to their own work
+- Have participated in social learning during the training sessions,
+  reviewing the code of other trainees
+- Have confidence in reading third-party code that uses some of these
+  advanced R techniques

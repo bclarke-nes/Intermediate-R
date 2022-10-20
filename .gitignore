@@ -2,7 +2,9 @@
 *.pdf
 *.docx
 /archive
-
+knit_list.r
+/iteration_*
+/purrr_*
 # History files
 .Rhistory
 .Rapp.history
