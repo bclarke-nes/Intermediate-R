@@ -1,7 +1,7 @@
 ---
 title: "![](img/header.png) Intermediate R"
 author: "Brendan Clarke"
-date: "`r Sys.Date()`"
+date: "2022-10-22"
 always_allow_html: true
 output:
   html_document: 
@@ -16,20 +16,24 @@ output:
     toc: yes
     toc_depth: '2'
     pandoc_args: ["--extract-media", "."]
-editor_options: 
-  chunk_output_type: console
 ---
 
 ```{r echo=F, warning=F, message=F}
 knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'asis')
 #install.packages(setdiff("pacman", rownames(installed.packages())))
 library("pacman")
-p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang,glue)
+p_load(purrr, tidyr, ggplot2,dplyr,lubridate, stringr,NHSRdatasets, rlang, glue)
+
+# function to add new window links
+link<-function(text,url) {
+  target<-c('{target="_blank"}')
+  glue('[{text}]({url}){target}')
+}
 ```
 
 # tidy evaluation {.tabset}
 
-Tidy evaluation is a [tidyverse-specific approach to programming](https://dplyr.tidyverse.org/articles/programming.html). This training session introduces two different elements of tidy evaluation:
+Tidy evaluation is a `r link("tidyverse-specific approach to programming", "https://dplyr.tidyverse.org/articles/programming.html")`. This training session introduces two different elements of tidy evaluation:
 
 + tidyselect, which are tidyverse-specific tools for working with columns
 + data masking, which are tools for using data as variables, and vice versa
@@ -41,9 +45,9 @@ It is part of a wider training programme designed as next steps for R users who 
 + dplyr
 + purr
 
-This tidyselect training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=tidyevaluation training) with any queries, comments, or suggestions. You can also find the source code for this training on the [GitHub repository](https://github.com/bclarke-nes/Intermediate-R).
+This tidyselect training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the `r link("TURAS page", "https://learn.nes.nhs.scot/64644")`, join the `r link("KIND Learning Network", "https://forms.office.com/r/WQdd6HSCEW")` for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=Intermediate R training) with any queries, comments, or suggestions. You can also find the source code for this training on the `r link("GitHub repository", "https://github.com/bclarke-nes/Intermediate-R")`.
 
-## tidyselect {.tabset}
+## Introduction
 
 ```{r echo=F}
 # function to display head() using kable()
@@ -58,8 +62,13 @@ display <- function(df) {
 
 ```
 
+This is a session of two halves. The tidyverse brings lots of powerful tools for working with data to R. The first half of the session is about showing the advantages of these tools. We'll look in detail at tidyselection, which is at the heart of the tidyverse approach to selecting data. We'll show how using tidyselect can simplify and speed-up your writing of code.
 
-Lots of the power in `dplyr` comes from the many ways that you can select columns. In this section, we'll look at tidyselect, which is a series of functions that allow you to specify columns by various  patterns. Not only does this give you lots of ways of simplifying and streamlining your code, but it's also a great way of making your code more portable - so that it works well inside functions, or across different data sets. 
+However, in the second half, we'll concentrate on the downside of the tidyverse approach. This is particularly apparent when using tidyverse tools within your own functions. We'll discuss a group of strategies to ensure that your code works correctly when using tidyverse functions in more advanced ways.
+
+## tidyselect {.tabset}
+
+In this section, we'll look at tidyselect, which is a series of functions that allow you to specify columns by various  patterns. Not only does this give you lots of ways of simplifying and streamlining your code, but it's also a great way of making your code more portable - so that it works well inside functions, or across different data sets. 
 
 We'll look at five groups of functions in this section. We'll start with the logical operators (like `!`) that are used across lots of R functions, before moving on to look at the additional functions found in tidyselect. There's quite a lot of information to absorb, so I would definitely recommend both using the manual pages (using `??tidyselect`) as a reference, and making sure that you try these functions out for yourself. Here are the functions that we'll be exploring:
 
@@ -86,7 +95,7 @@ We're using a little helper function here, `display()`. You can find the code fo
 
 ### logical operators
 
-As usual, the [R4DS chapter]('https://r4ds.had.co.nz/transform.html?q=&&#logical-operators') is extremely helpful if this is completely new to you. The four operators that we'll introduce here are found all over R, and aren't in any way specific to the tidyverse, so we'll review them very briefly before moving on to the more idiosyncratic aspects of tidyselect. 
+As usual, the `r link("R4DS chapter", "https://r4ds.had.co.nz/transform.html?q=&&#logical-operators")` is extremely helpful if this is completely new to you. The four operators that we'll introduce here are found all over R, and aren't in any way specific to the tidyverse, so we'll review them very briefly before moving on to the more idiosyncratic aspects of tidyselect. 
 
 `:` allows you to select a range of columns. So to select the second to the fifth columns in the `stranded_data` set by name:
 
@@ -206,7 +215,7 @@ stranded_data %>%
 ```
 
 #### `matches()`
-While `starts_with()` and `ends_with()` match supplied strings, `matches()` uses [regular expressions](https://cran.r-project.org/web/packages/stringr/vignettes/regular-expressions.html) (regex). Regular expressions are a way of matching all kinds of strings by specifying a particular pattern. For example, you can use regex to search through a piece of text for all the email addresses that it contains. In pseudocode, the regex would work like this:
+While `starts_with()` and `ends_with()` match supplied strings, `matches()` uses `r link("regular expressions", "https://cran.r-project.org/web/packages/stringr/vignettes/regular-expressions.html")` (regex). Regular expressions are a way of matching all kinds of strings by specifying a particular pattern. For example, you can use regex to search through a piece of text for all the email addresses that it contains. In pseudocode, the regex would work like this:
 
 + look for an @
 + look for the start and ends of the word that contains that @
@@ -216,7 +225,7 @@ Getting to grips with regex is a bit forbidding, because the syntax used is very
 
 > [[:alnum:].-_]+@[[:alnum:].-]+
 
-Luckily, there are some great tools to help the beginner - such as [the Rstudio cheatsheet](https://raw.githubusercontent.com/rstudio/cheatsheets/main/regex.pdf), or the interactive tool [regular expressions 101](https://regex101.com/).There are also a few very simple examples below that cover some of the common cases:
+Luckily, there are some great tools to help the beginner - such as `r link("the Rstudio cheatsheet", "https://raw.githubusercontent.com/rstudio/cheatsheets/main/regex.pdf")`, or the interactive tool `r link("regular expressions 101", "https://regex101.com/")`. There are also a few very simple examples below that cover some of the common cases:
 
 Match one of a group of letters using `[]`:
 ```{r}
@@ -254,9 +263,12 @@ stranded_data %>%
 
 ```{r}
 # using the man page example:
+data(billboard)
+
 billboard %>%
-  select(num_range("wk", 10:15)) %>%
+  dplyr::select(num_range("wk", 10:15)) %>%
   display()
+
 ```
 
 This kind of structure with many predictably-named columns often arises when using `pivot_wider()` to transform data. For example:
@@ -495,13 +507,13 @@ Okay, so we can dodge this error in this case by quoting the column name when we
 column_displayer("age")
 ```
 
-But this non-standard [kludge](https://en.wiktionary.org/wiki/kludge#English) leads to trouble when we want to, for instance, use `column_displayer()` inside another function. A stronger approach is to adjust our function code in the first place, so that we don't have to call our function in a non-standard way (why write *age* in some functions, but *"age"* in others to refer to the same thing).
+But this non-standard `r link("kludge", "https://en.wiktionary.org/wiki/kludge#English")` leads to trouble when we want to, for instance, use `column_displayer()` inside another function. A stronger approach is to adjust our function code in the first place, so that we don't have to call our function in a non-standard way (why write *age* in some functions, but *"age"* in others to refer to the same thing).
 
 In this section, we'll give a bit of helpful theoretical background about data masking. We'll then go on to look at four ways of resolving some of the difficulties that data masking can cause.
 
 ### Background
 
-The [rlang page on data-masking](https://rlang.r-lib.org/reference/topic-data-mask.html) is very helpful here in setting out a key distinction between kinds of variables that we've previously been using synonymously:
+The `r link("rlang page on data-masking", "https://rlang.r-lib.org/reference/topic-data-mask.html")` is very helpful here in setting out a key distinction between kinds of variables that we've previously been using synonymously:
 
 + env-variables (things you create with assignment)
 + data-variables (e.g. imported data in a tibble)
@@ -520,7 +532,7 @@ mtcars %>%
   select(cyl) # specifying a data variable like an environment variable inside select
 ```
 
-Most of the time, data masking doesn't cause any problems. However, when you start wanting to include tidyverse functions inside other functions, that blurring raises a problem. We won't give much of an explanation as to the reasons for this, although do read [this introduction to the topic](https://rlang.r-lib.org/reference/topic-data-mask.html) and [this more detailed account](https://rlang.r-lib.org/reference/topic-data-mask-ambiguity.html) if you are interested in the technical aspects. Here, we'll concentrate on four strategies for resolving these kind of data masking problems. These strategies are:
+Most of the time, data masking doesn't cause any problems. However, when you start wanting to include tidyverse functions inside other functions, that blurring raises a problem. We won't give much of an explanation as to the reasons for this, although do read `r link("this introduction to the topic", "https://rlang.r-lib.org/reference/topic-data-mask.html")` and `r link("this more detailed account", "https://rlang.r-lib.org/reference/topic-data-mask-ambiguity.html")` if you are interested in the technical aspects. Here, we'll concentrate on four strategies for resolving these kind of data masking problems. These strategies are:
 
 ```{r echo=F}
 tribble(
@@ -581,11 +593,12 @@ ae_means(admissions)
 map(ae_attendances %>% select(where(is.numeric)) %>% names(), ae_means)
 ```
 
-Slightly confusingly, this practice is also referred to as ["tunneling" data variables](https://www.tidyverse.org/blog/2020/02/glue-strings-and-tidy-eval/).
+Slightly confusingly, this practice is also referred to as `r link("*tunneling* data variables", "https://www.tidyverse.org/blog/2020/02/glue-strings-and-tidy-eval/")`.
 
 #### Exercise
 
 Take the `ae_means` function, update it so that we can specify:
+
 + different values for the `filter` cut-off
 + and different columns to apply that cut-off to
 + then use the supplied `pmap` code to test your function on the supplied tibble `testo`
@@ -630,7 +643,7 @@ attendances <- 800
 
 If we try to use it to filter our data, we'll run into a problem:
 
-````{r}
+```{r}
 ae_attendances %>%
   filter(breaches >= attendances) %>% 
   display()
@@ -674,6 +687,7 @@ cutoff <- 400
 cat(paste0("This is how we'd include the column (", column, "), and the cutoff (", cutoff, ") in Rmarkdown using `paste0`  \n  \n"))
 
 cat(glue("This is how we'd include the column ({column}), and the cutoff ({cutoff}) in Rmarkdown using `glue`")) # easier to read
+
 ```
 
 The column name is then injected using the `:=` operator. When we call our `col_means()` function, the supplied column name is injected into the new summary column:
@@ -732,7 +746,7 @@ ae_attendances %>%
 
 That gives us a useful and clear way of thinking about quasiquotation. To borrow the description from the manual page:
 
-> Quasiquotation is the combination of quoting an expression while allowing immediate evaluation (unquoting) of part of that expression. ([rlang quasiquotation manual page](https://www.rdocumentation.org/packages/rlang/versions/0.2.1/topics/quasiquotation))
+> Quasiquotation is the combination of quoting an expression while allowing immediate evaluation (unquoting) of part of that expression. (`r link("rlang quasiquotation manual page", "https://www.rdocumentation.org/packages/rlang/versions/0.2.1/topics/quasiquotation")`)
 
 And the strength of using quasiquotation is that it grants lots of scope for handling variables in comparatively complicated function. For example, if we want to create a function to take a supplied tibble and column name, and generate a bit of Rmarkdown with a header and summary of that column, quasiquotation (and injection) allow us to wrangle our variables so that they are compatible with the tidyverse functions that we'd like to use:
 

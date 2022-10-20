@@ -1,7 +1,7 @@
 ---
 title: "![](img/header.png) Intermediate R"
 author: "Brendan Clarke"
-date: "`r Sys.Date()`"
+date: "2022-10-22"
 always_allow_html: true
 output:
   html_document: 
@@ -16,8 +16,6 @@ output:
   word_document:
     toc: yes
     toc_depth: '2'
-editor_options: 
-  chunk_output_type: console
 ---
 
 ```{r echo=F, warning=F, message=F}
@@ -26,6 +24,11 @@ install.packages(setdiff("pacman", rownames(installed.packages())))
 library("pacman")
 p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang,glue)
 
+# function to add new window links
+link<-function(text,url) {
+  target<-c('{target="_blank"}')
+  glue('[{text}]({url}){target}')
+}
 ```
 
 # Functions {.tabset}
@@ -39,11 +42,11 @@ It is part of a wider training programme designed as next steps for R users who 
 + dplyr
 + purrr
 
-This functions training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=functions training) with any queries, comments, or suggestions. You can also find the source code for this training on the [GitHub repository](https://github.com/bclarke-nes/Intermediate-R).
+This functions training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the `r link("TURAS page", "https://learn.nes.nhs.scot/64644")`, join the `r link("KIND Learning Network", "https://forms.office.com/r/WQdd6HSCEW")` for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=Intermediate R training) with any queries, comments, or suggestions. You can also find the source code for this training on the `r link("GitHub repository", "https://github.com/bclarke-nes/Intermediate-R")`.
 
 ## Introduction
 
-If you haven't glanced at it before, the book *R for Data Science (R4DS)* comes highly recommended. And we'll follow lots of the advice given in the [R4DS chapter on functions](https://r4ds.had.co.nz/functions.html) in this training session. For example, the authors of that chapter advise readers to consider writing a function whenever you repeat a section of code more than twice. The rationale for this advice is that repetition makes code more complicated. Complicated code is then harder to understand and rework than simple code.
+If you haven't glanced at it before, the book *R for Data Science (R4DS)* comes highly recommended. And we'll follow lots of the advice given in the `r link("R4DS chapter on functions", "https://r4ds.had.co.nz/functions.html")` in this training session. For example, the authors of that chapter advise readers to consider writing a function whenever you repeat a section of code more than twice. The rationale for this advice is that repetition makes code more complicated. Complicated code is then harder to understand and rework than simple code.
 
 Let's illustrate how repetition makes code more complicated. Say we write a block of code to draw a graph showing A&E waiting time breaches from one of the organisations in the `ae_attendances` data set from the NHSRdatasets package:
 
@@ -58,7 +61,7 @@ ae_attendances %>%
 
 There's no reason to turn this code into a function if we want to use it once or twice. But if we need to repeat it more than once, we should be thinking about making the code into a function. That way we could draw the same graph many times (once each for the `r length(unique(ae_attendances$org_code))` orgs in this data, perhaps).
 
-Imagine that we've ignored the [R4DS advice](https://r4ds.had.co.nz/functions.html) about copy/pasting, and have repeated the same code a few times, updating both the `labs()` and the `filter()` calls:
+Imagine that we've ignored the `r link("R4DS advice", "https://r4ds.had.co.nz/functions.html")` about copy/pasting, and have repeated the same code a few times, updating both the `labs()` and the `filter()` calls:
 
 ```{r}
 ae_attendances %>%
@@ -93,7 +96,7 @@ The second problem of repeating code is this: imagine that you realise that a tw
 
 The third problem: imagine that we now need to add an extra set of graphs that show the attendance (rather than breach) data for the same organisations. That long block of code would essentially repeat this one - but swapping the word "breaches" for the word "attendances".
 
-We can solve all these problems by turning the code into a function. As the [R4DS chapter on functions](https://r4ds.had.co.nz/functions.html) puts it, the advantages of functions are:
+We can solve all these problems by turning the code into a function. As the `r link("R4DS chapter on functions", "https://r4ds.had.co.nz/functions.html")` puts it, the advantages of functions are that:
 
 + functions have names, so they make code easier to read and understand
 + they allow you to make changes to your code in one place only
@@ -126,7 +129,7 @@ Here's a simple function:
 
 ```{r}
 my_fun <- function(user_name) {
-  cat(glue("Hello {user_name}, welcome to the wonderful world of functions  \n  \n"))
+  cat(glue("**Hello {user_name}, welcome to the wonderful world of functions**  \n  \n"))
 }
 ```
 
@@ -162,7 +165,7 @@ Note the **two** spaces before the `\n` - these are absolutely necessary to make
 # change the message that my_fun() prints - keep it as clean as you can, please!
 
 my_fun <- function(user_name) {
-  cat(glue("Hello {user_name}, welcome to the wonderful world of functions  \n  \n"))
+  cat(glue("**Hello {user_name}, welcome to the wonderful world of functions**  \n  \n"))
 }
 
 my_fun("Susan")
@@ -170,7 +173,7 @@ my_fun("Susan")
 
 ## Function syntax
 
-The function manual page found using `?function` is not very illuminating, particularly when you're starting to learn how to write functions. I think that the [R4DS chapter on functions](https://r4ds.had.co.nz/functions.html) that we've already mentioned does a much better job of explaining the building blocks of functions in R. These are:
+The function manual page found using `?function` is not very illuminating, particularly when you're starting to learn how to write functions. I think that the `r link("R4DS chapter on functions", "https://r4ds.had.co.nz/functions.html")` that we've already mentioned does a much better job of explaining the building blocks of functions in R. These are:
 
 1. A memorable name, to make it easy to understand what a function that you're using does
 2. Some arguments, which you pass to the function (like "Susan" at the end of the code block above)
@@ -201,7 +204,7 @@ Now let's think about arguments. We've got one argument already in our function.
 ```{r}
 # add a second argument inside the function() - separated by a comma from the existing first argument
 my_fun <- function(user_name) {
-  cat(glue("Hello {user_name}, welcome to the wonderful world of functions  \n  \n"))
+  cat(glue("**Hello {user_name}, welcome to the wonderful world of functions**  \n  \n"))
 }
 
 # test your function with a second argument - remember to update the arguments
@@ -240,14 +243,14 @@ We've already been playing around with a simple function. Now that we've spent s
 
 ```{r}
 my_fun <- function(user_name) {
-  cat(glue("Hello {user_name}, welcome to the wonderful world of functions  \n  \n"))
+  cat(glue("**Hello {user_name}, welcome to the wonderful world of functions**  \n  \n"))
 }
 ```
 
 + `my_fun` = function name
 + `function()` = the function that (confusing!) makes functions for us
 + `user_name` = the single argument that we pass to the function
-+ `cat(paste0("Hello ", user_name...` = the contents of our function
++ `cat(glue("**Hello {user_name}...` = the contents of our function
 
 When we want to use the function, we write the following function call:
 ```{r}
@@ -282,9 +285,7 @@ range_o_matic <- function() {
 
 Once you've finished updating the function itself, make sure that you test it!
 
-Okay, so I hope I've show you that even 0-argument functions can be potentially useful. However, being able to add arguments allows us to apply functions to different aspects of our analysis without having to re-write the code each time, as we did above. Ideally, we'd like to be able to apply `range_o_matic()` to *any* variable in *any* data series. We'll return to this in the section after next. Next, we'll start explaining how to translate our own code into functions by adding arguments.
-
-We'll fix that in the next step
+Okay, so I hope I've show you that even 0-argument functions can be potentially useful. However, being able to add arguments allows us to apply functions to different aspects of our analysis without having to re-write the code each time, as we did above. Ideally, we'd like to be able to apply `range_o_matic()` to *any* variable in *any* data series. We'll start working on that problem in the next section where we'll start adding arguments to our function.
 
 ## Translating code into functions
 
@@ -313,7 +314,7 @@ mean_raw_data <- mean(raw_data)           # the mean of all the numbers
 sum(abs(raw_data - mean_raw_data))        # find the sum of differences from mean
 ```
 
-But reusing this code each time quickly gets complicated, particularly if you need to tweak the code as your code develops. Just to illustrate, while writing this I've just had to change two of the variable names in the two code blocks above, and it took me a solid couple of attempts before everything worked properly again. Let's avoid that kind of messing around if we can. As [R4DS puts it](https://r4ds.had.co.nz/functions.html), to keep things clean and simple, we should avoid copy/pasting code more than twice. The good news is that we can easily turn this code into a function together. Let's call this function `diff_sum()`. I'll work through this process below, and then you can have a go at translating some new code into a working function.
+But reusing this code each time quickly gets complicated, particularly if you need to tweak the code as your code develops. Just to illustrate, while writing this I've just had to change two of the variable names in the two code blocks above, and it took me a solid couple of attempts before everything worked properly again. Let's avoid that kind of messing around if we can. As `r link("R4DS puts it", "https://r4ds.had.co.nz/functions.html")`, to keep things clean and simple, we should avoid copy/pasting code more than twice. The good news is that we can easily turn this code into a function together. Let's call this function `diff_sum()`. I'll work through this process below, and then you can have a go at translating some new code into a working function.
 
 The first job is to set up the function syntax. This is really simple:
 
@@ -381,11 +382,9 @@ A suggestion for approaching this exercise:
 3. review the code, so that instead of `raw_data` being hard-coded, we use an argument to pass the numbers to the function
 4. test your working function with a selection of numbers
 
-## More complicated functions
+## Indirection
 
-So far, we've only used very simple code as the body of our functions. We're going to make things a bit more complicated here. The reason for doing this is that often we want to use functions to avoid repeating a complicated piece of code, so beginners often want to start working on fairly intricate bits of code right away. There are a couple of pain-points as our code develops, so we'll look at some useful tools for avoiding these difficulties.
-
-### Indirection
+So far, we've only used very simple code as the body of our functions. We're going to make things a bit more complicated here. The reason for doing this is that often we want to use functions to avoid repeating a complicated piece of code, so beginners often want to start working on fairly intricate bits of code right away. 
 
 Back to our 0-argument function `range-o-matic()`. We want to adapt this so that we could supply it with any variable in any data set, and have it return the range. Let's have a go at doing that:
 
@@ -407,7 +406,7 @@ The short answer is that `pull()` doesn't know what we're referring to when we a
 ae_attendances %>%
   ...
 ```
-In what follows, because of the way that the pipe works, we can just specify columns in that tibble without explicitly specifying that they are part of that tibble. For instance, in the following `select()` call, we just write `attendances`:
+After that, because of the way that the pipe works, we can just specify columns in that tibble without explicitly specifying that they are part of that tibble. For instance, in the following `select()` call, we just write `attendances`:
 
 ```{r eval=F}
 ae_attendances %>%
@@ -433,9 +432,9 @@ range_o_matic(LOS_model, Age)
 
 ```
 
-A practical introduction to indirection can be found [in the *Programming with dplyr vignette*](https://dplyr.tidyverse.org/articles/programming.html). Again, there's a bit of complexity here, and we have training that covers this available in other parts of the KIND Learning Network intermediate R programme - particularly the session on tidyevaluation. 
+A practical introduction to indirection can be found `r link("in the *Programming with dplyr vignette*", "https://dplyr.tidyverse.org/articles/programming.html")`. Again, there's a bit of complexity here, and we have a dedicated training session on tidyevaluation that deals with this issue. 
 
-[The *Advanced R* chapter on quasiquotation](https://adv-r.hadley.nz/quasiquotation.html) is also helpful to understand why this kind of indirection is needed in functions. While the chapter is challenging, it does really help in giving a sense of what's going on behind the scenes. Practically, though, the best way of developing your skills with functions is practice. A little bit of trial and error, and a lot of focused searching for help is an excellent way to learn.
+`r link("The *Advanced R* chapter on quasiquotation", "https://adv-r.hadley.nz/quasiquotation.html")` is also helpful to understand why this kind of indirection is needed in functions. While the chapter is challenging, it does really help in giving a sense of what's going on behind the scenes. Practically, though, the best way of developing your skills with functions is practice. A little bit of trial and error, and a lot of focused searching for help is an excellent way to learn.
 
 Now that we've gained a bit of experience in indirecting within a simple function, we'll try something similar with more complicated code.
 
@@ -598,7 +597,7 @@ As a final thought, we should introduce `...`. `...` lets you pass many argument
 
 ```{r}
 auto_personaliser <- function(name, org) {
-  cat(glue('Report generated by {name} from {org} on {format(Sys.time(), "%d-%b-%Y")}  \n'))
+  cat(glue('Report generated by {name} from {org} on {format(Sys.time(), "%d-%b-%Y")}  \n  \n'))
 }
 ```
 
@@ -608,12 +607,11 @@ When called, this function generates a bit of Rmarkdown output for us:
 auto_personaliser("Steve", "NSS")
 ```
 
-Now let's imagine that we want to use that function inside another function. Perhaps we have a standard function that creates a bit of Rmarkdown for us that we want to put in each section of a report:
+Now let's imagine that we want to use that function inside another function. Perhaps we have a standard function that creates a bit of Rmarkdown that we want to include in each section of a report:
 
 ```{r}
-
 graph_caption <- function() {
-  cat("  \n#### Disclaimer  \nAll rights reserved. Any similarity to actual persons, living or dead, is purely coincidental. Do not attempt to adjust your set.  \n -----  \n")
+  cat("  \n **Disclaimer** All rights reserved. Any similarity to actual persons, living or dead, is purely coincidental.  \n")
 }
 ```
 
@@ -626,8 +624,8 @@ So, it would be useful to be able to add our `auto_personaliser()` function into
 
 ```{r}
 graph_caption <- function() {
-  cat("  \n#### Disclaimer  \nAll rights reserved. Any similarity to actual persons, living or dead, is purely coincidental. Do not attempt to adjust your set.  \n -----  \n")
-  cat(glue('  \n {auto_personaliser("Steve", "NSS")}'))
+  cat("  \n **Disclaimer** All rights reserved. Any similarity to actual persons, living or dead, is purely coincidental.  \n")
+  cat(glue('  \n  {auto_personaliser("Steve", "NSS")}'))
 }
 
 graph_caption()
@@ -639,7 +637,7 @@ This is where dots can help. We can use them to pass the two `auto_personaliser(
 
 ```{r}
 graph_caption <- function(...) {
-  cat("  \n####  \n Disclaimer: All rights reserved. Any similarity to actual persons, living or dead, is purely coincidental. Do not attempt to adjust your set.  \n -----  \n  ")
+  cat("  \n **Disclaimer** All rights reserved. Any similarity to actual persons, living or dead, is purely coincidental.  \n")
   cat(glue('  \n  {auto_personaliser(...)}'))
 }
 

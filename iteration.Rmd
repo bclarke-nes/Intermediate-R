@@ -1,7 +1,7 @@
 ---
 title: "![](img/header.png) Intermediate R"
 author: "Brendan Clarke"
-date: "`r Sys.Date()`"
+date: "2022-10-22"
 always_allow_html: true
 output:
   html_document: 
@@ -17,8 +17,6 @@ output:
     toc: yes
     toc_depth: '2'
     pandoc_args: ["--extract-media", "."]
-editor_options: 
-  chunk_output_type: console
 ---
 
 ```{r echo=F}
@@ -26,6 +24,12 @@ knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
 install.packages(setdiff("pacman", rownames(installed.packages())))
 library("pacman")
 p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang,glue)
+
+# function to add new window links
+link<-function(text,url) {
+  target<-c('{target="_blank"}')
+  glue('[{text}]({url}){target}')
+}
 ```
 
 # Iteration {.tabset}
@@ -38,7 +42,7 @@ for (i in seq_along(1:10)) {
 ```
 
 
-While for-loops are a basic building-block of many programming languages, they are found infrequently in R. There are a couple of good reasons for this. First, for-loops can be very slow in R, and writing high-performance code has a perennial appeal that surpasses its actual importance in day-to-day data analysis. Second, most functions in R are vectorised (a term we'll explain later). For now, all we need to know is that vectorised functions allow a user to avoid writing for-loops.
+While for-loops are a basic building-block of many programming languages, they are found infrequently in R. There are a couple of good reasons for this. First, for-loops can be very slow in R, and writing high-performance code has a perennial appeal that surpasses its actual importance in day-to-day data analysis. Second, most functions in R are vectorised. Vectorised functions, as We'll explain later, usually allow us to avoid writing for-loops.
 
 However, imperative programming using for-loops definitely has a place, even if a purist might avoid them for performance reasons. Computer time is cheaper than analyst time, and loops definitely have some strengths in real-world analysis. One important strength of for-loops is that they allow you to repeatedly apply a non-vectorised function elegantly. As some of the core Rmarkdown functions are not vectorised, for-loops are an important part of the Rmarkdown programmer's toolkit. So this training will give you a basic introduction to writing good loops in R, and we'll cover some strategies for avoiding the worst of the performance hit that iteration can cause.
 
@@ -49,17 +53,19 @@ This training session is part of a wider training programme designed as next ste
 + dplyr
 + purr
 
-This iteration training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the [TURAS page](), join the [KIND Learning Network](https://forms.office.com/r/WQdd6HSCEW) for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=iteration training) with any queries, comments, or suggestions. You can also find the source code for this training on the [GitHub repository](https://github.com/bclarke-nes/Intermediate-R).
+This iteration training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the `r link("TURAS page", "https://learn.nes.nhs.scot/64644")`, join the `r link("KIND Learning Network", "https://forms.office.com/r/WQdd6HSCEW")` for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=Intermediate R training) with any queries, comments, or suggestions. You can also find the source code for this training on the `r link("GitHub repository", "https://github.com/bclarke-nes/Intermediate-R")`.
 
 ## Introduction
 
-Once again, this training is influenced by the explanations and code from [R4DS](https://r4ds.had.co.nz/iteration.html#for-loops). It's impossible to recommend this book as a resource too strongly, and a quick read of the iteration chapter will be a useful adjunct to this session.
+Once again, this training is influenced by the explanations and code from `r link("R4DS", "https://r4ds.had.co.nz/iteration.html#for-loops")`. It's impossible to recommend this book as a resource too strongly, and a quick read of the iteration chapter will be a useful adjunct to this session.
 
-There's a bit more base R in this session than most of the KIND Learning Network training. We'll explain anything new that crops up, and most of the base R code is pretty straightforward. A couple of useful examples that we'll include here are the base R ways of selecting from tibbles. For some tibble called `df`:
+There's a bit more base R in this session than most of the KIND Learning Network training. We'll explain anything new that crops up, and most of the base R code is pretty straightforward. Some useful examples that we'll include here are the base R ways of selecting from tibbles. For some tibble called `df`:
 
 + `df[[]]`
   + `df[["val"]]` selects the column named `val` 
   + `df[[n]]` selects the n^th column from df
++ `df[(row, column)]`
+  + `df[1,2]` selects the value in the first row, second column
 + `df$`
   + `df$val` selects the column named `val` 
   + `df$n` selects the nth column from df
@@ -98,7 +104,7 @@ for (i in seq_along(x)) {
 cat(word)
 ```
 
-From the [R4DS chapter](https://r4ds.had.co.nz/iteration.html) which - like the rest of that book - is essential reading, we can identify three parts to this for loop:
+From the `r link("R4DS chapter", "https://r4ds.had.co.nz/iteration.html")` which - like the rest of that book - is essential reading, we can identify three parts to this for loop:
 
 1. **Output** - what do you want out of the loop? Here, it's `word`, which is initially empty, but will gradually expand...
 2. **Sequence** - what do you want to loop over? Here, it's `x`, which contains the numbers 1 to 10
@@ -123,7 +129,7 @@ for (i in seq_along(x)) {
 cat(word)
 ```
 
-And there's no reason we need to confine the output of our loop to a vector. We could adapt our loop to produce a simple tibble:
+And there's no reason we need to confine the output of our loop to a vector. Using the `df[(row, column)]` shorthand from the introduction, we could adapt our loop to produce a simple tibble:
 
 ```{r}
 
@@ -331,7 +337,7 @@ bottles = bottles - 1
 
 ### Exercise
 
-Can you finish off the 10 green bottles loop above? Bonus points if you can update the final iteration to [fit the lyric "no green bottles"](https://en.wikipedia.org/wiki/Ten_Green_Bottles):
+Can you finish off the 10 green bottles loop above? Bonus points if you can update the final iteration to `r link("fit the lyric 'no green bottles'", "https://en.wikipedia.org/wiki/Ten_Green_Bottles")`:
 
 ```{r}
 
@@ -357,7 +363,7 @@ cube_inputs <- c(3,6,5,4,3)
 cube(cube_inputs)
 ```
 
-So what's the problem? Let's fiddle with our `cube()` function:
+So what's the problem? Let's fiddle with our `cube()` function so that it will cube even numbers, but square odd numbers:
 
 ```{r}
 conditional_cube <- function(num) {
@@ -375,13 +381,13 @@ conditional_cube(3) # should square the input for odd numbers
 conditional_cube(4) # should cube the input for even numbers
 ```
 
-However, `conditional_cube()` won't work properly on a vector. Let's try it now, using the useful function `try()`, which attempts to run code, and returns the error message if it doesn't work. That allows us to run dodgy code in Rmarkdown without breaking the knitting process, as would usually happen when we encounter an error:
+However, `conditional_cube()` won't work properly on a vector. Let's try it now, using the useful function `try()`, which attempts to run code, and returns the error message if it doesn't work. That allows us to test out dodgy code in Rmarkdown without breaking the knitting process, as would usually happen when we encounter an error:
 
 ```{r}
 try(conditional_cube(cube_inputs))
 ```
 
-That `condition has length > 1` in the error message is R's way of telling us that `conditional_cube()` is a *scalar* function that require one item to be supplied to it at a time. While there aren't that many scalar functions in widespread R use now, one major exception is `if()`/`else()`. These are the basis of our `conditional_cube()` misfire, and as conditional execution is a common reason for writing your own functions, unexpectedly encountering a scalar function can be an irritating little problem.
+That `condition has length > 1` in the error message is R's way of telling us that `conditional_cube()` is a *scalar* function. Scalar functions require one item to be supplied to them at a time. While there aren't that many scalar functions in widespread R use now, one major exception is `if()`/`else()`. These are the basis of our `conditional_cube()` misfire, and as conditional execution is a common reason for writing your own functions, unexpectedly encountering a scalar function can be an irritating little problem.
 
 Here, we can solve this problem with `conditional_cube()` in a few different ways:
 
@@ -423,10 +429,11 @@ perd <- function(x) {
 }
 ```
 
-Let's try `perd()` out inside `mutate()`:
+Let's try `perd()` inside `mutate()`:
 
 ```{r}
 synthetic_news_data %>%
+  select(1:3) %>%
   mutate(age = perd(age))
 ```
 
@@ -437,7 +444,7 @@ synthetic_news_data %>%
   mutate(across(everything(), perd))
 ```
 
-That works straightforwardly enough, even if it ruins our tibble completely. Things get a bit more complicated when we try to add extra arguments to `perd()` though:
+That works straightforwardly enough, even if it ruins our tibble completely. Things get more complicated when we try to add extra arguments to `perd()` though:
 
 ```{r}
 perd_v <- function(var_name, x) {
@@ -445,7 +452,7 @@ perd_v <- function(var_name, x) {
 }
 ```
 
-We can use dplyr's [context dependent expressions](https://dplyr.tidyverse.org/reference/context.html) here:
+We can use dplyr's `r link("context dependent expressions", "https://dplyr.tidyverse.org/reference/context.html")` here:
 
 ```{r}
 synthetic_news_data %>%
@@ -515,10 +522,10 @@ for (i in seq_along(orgs_seq)) {
             pull()
     
     # customised 4th level header containing org_code
-    cat(paste0("  \n  \n#### ", orgs_seq[i], " attendances  \n"))
+    cat(glue("  \n  \n#### {orgs_seq[i]} attendances  \n"))
     
     # customised explanatory text
-    cat(paste0("Some explanatory text: ", orgs_seq[i], " had a total of ", org_total_admissions, " admissions.  \n"))
+    cat(glue("Some explanatory text: {orgs_seq[i]} had a total of {org_total_admissions} admissions.  \n"))
     
     # use kable() to display a summary of the data
     print(ae_attendances %>%
