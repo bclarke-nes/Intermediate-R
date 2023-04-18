@@ -25,7 +25,7 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'asis')
 install.packages(setdiff("pacman", rownames(installed.packages())))
 library("pacman")
-p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang, glue)
+p_load(tidyr,readr,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang, glue, knitr)
 
 # function to add new window links
 link<-function(text,url) {
@@ -47,42 +47,35 @@ This purrr training can be taken as a stand-alone session, or integrated into a 
 
 ## Introduction
 
-`purrr()` gives us a powerful and standardised way of applying functions to more-or-less any R object that we like, and collecting the results of those functions in any format we choose. That power makes `purrr()` feel daunting, but actually using it is very simple. It's just a question of picking the right tool for the job. `purrr()` consists of a couple of families of tools to let you apply functions in different ways. 
+`purrr()` gives us a powerful and standardised way of applying functions to more-or-less any R object that we like, and collecting the results of those functions in any format we choose. That power makes `purrr()` feel daunting, but actually using it is very simple. It's just a question of picking the right tool for the job. `purrr()` consists of a couple of families of systematically-named tools to let you apply functions in different ways. 
 
-```{r echo=F, cache=TRUE, fig.height=2, fig.width=8}
+```{r eval=F, echo=F, cache=TRUE, fig.height=2, fig.width=8}
+library(DiagrammeR)
 DiagrammeR::mermaid("
-graph LR
+graph TD
 
   do[What do you want to do?]
   return(Return something)
-  walk[Use walk]
-  map[Use map and variants]
-  map_dfc[Use map_dfc and map_dfr]
-  what[Return what?]
-  tibble(tibble)
-  vector(vector)
   display(Display something)
 
+list --> map
 do --> return
-return --> what
-what --> tibble
-what --> vector
+return -->  tibble
+return -->  vector
+return --> list
+
 tibble --> map_dfc
-vector --> map
+tibble --> map_dfr
+vector --> map_chr
+vector --> map_dbl
+vector --> map_lgl
+vector --> map_int
 do --> display
 display --> walk
 ")
 ```
 
-Broadly, the question to answer first is:
-
-+ What do you want to do?
-
-Here, the `walk()` family of tools are broadly intended to display things. So if you want to draw a series of graphs, you'll be using `walk()` or one of its relatives. The next question, assuming that you want to return something to use later in your code, is:
-
-+ What kind of object you want to return?
-
-Depending on the answer to that question, you'll use either `map()`, or `map_dfc()/map_dfr()`. 
+`walk()` displays things, while `map()` returns things. So if you want to draw a series of graphs, you'll be using `walk()` or one of its relatives. On the other hand, if you want to return some data to another function, you'll use `map()` or one of its relatives.
 
 With that high-level overview out of the way, let's begin at the beginning. As `purrr()` lets us pass things to functions, we'll need a test function to play with. Don't worry if you've never written a function before - the key idea is that functions are just a way of wrapping up bits of useful code so that they can be reused in your R scripts. We write functions like this:
 
@@ -116,12 +109,8 @@ Here's our simple function - `non_admissions()`:
 non_admissions <- function(single_org_code) {
   ae_attendances %>%
     filter(org_code == {{single_org_code}}) %>%
-    group_by(year=floor_date(period, unit="year")) %>%
-    summarise(
-      year=year(year), 
-      org_code={{single_org_code}}, 
-      non_admissions = sum(attendances-admissions)) %>%
-    unique()
+    group_by(org_code, year=floor_date(period, unit="year")) %>%
+    summarise(non_admissions = sum(attendances-admissions), year=unique(year(year)))
 }
 ```
 
@@ -129,7 +118,8 @@ non_admissions <- function(single_org_code) {
 
 + takes the ae_attendances data from the NHSRdatasets package
 + filters it for the supplied org_code
-+ then groups the data into years, and summarises the number of non-admissions (so attendances - admissions)
++ then groups the data into years
++ summarises the number of non-admissions (so attendances - admissions)
 + finally, returns a tibble with that summary
 
 Calling this function gets us a small tibble with our non-attendance statistic grouped into year ranges:
@@ -138,11 +128,11 @@ Calling this function gets us a small tibble with our non-attendance statistic g
 non_admissions("AJN")
 ```
 
-This tibble will behave like any other, so we can assign it to a name, or pipe it to other functions, or we can display it. Let's display this tibble properly, using `knitr::kable()`:
+This tibble will behave like any other, so we can assign it to a name, or pipe it to other functions, or we can display it. Let's display this tibble properly, using `kable()`:
 
 ```{r}
 non_admissions("AJN") %>%
-  knitr::kable()
+  kable()
 ```
 
 Here's how `purrr()` is useful. Let's imagine that we now would like to apply our `non_attendance_range()` over all the `r nrow(ae_attendances %>% distinct(org_code))` organisations in our data. We *could* do this manually by calling our `non_attendance_range()` function on each org_code one-by-one: 
@@ -164,32 +154,27 @@ So, we want to apply `non_admissions()` to lots of org_codes, but we don't want 
 + `.x` - a list or vector
 + `.f` - a function (or formula)
   
-Let's try this out now. First, we'll make a vector of ten organisations and assign it to `short_org_codes`:
+Let's try this out now. First, we'll make a vector of three organisations and assign it to `short_org_codes`:
 
 ```{r}
 short_org_codes <- ae_attendances %>%
   distinct(org_code) %>%
   arrange(org_code) %>%
-  slice(80:89) %>%
+  slice(80:82) %>%
   pull()
 ```
 
-Note that we can happily use more than 10 organisations if we need to, although this will make for a slower knit, and a longer output document. Once we have our vector of organisations, applying our function to each is easy:
+Note that we can happily use more than three organisations if we need to, although this will make for a slower knit, and a longer output document. Once we have our vector of organisations, applying our function to each is easy:
 
 ```{r results='markup'}
-
-non_adm_ka <- function(org) {
-  non_admissions(org) %>%
-    knitr::kable()
-}
-
-purrr::walk(short_org_codes, non_adm_ka)
+purrr::map(short_org_codes, non_admissions)
 ```
 
 As long as our function only takes one argument, we can use *any* function in this call to `map()`. We can even create a one-off anonymous function (which we should properly call a *formula*) inside the call to `map()`:
 
 ```{r}
 daft_codes <- map(short_org_codes, ~ glue("ThIs OrG CoDe iS {.x}  \n  \n"))
+daft_codes
 ```
 
 In this formula, we use `glue()` to create a short string from each item in short_org_codes. These individual items are represented using the shorthand `.x`. We then assign the results into a `list`:
@@ -214,7 +199,7 @@ daft_codes[[1]] # returns just the first item in the first sublist
 And you can access the contents of the list in all the ways you might expect. For instance, we can iterate using a for-loop:
 
 ```{r}
-for(i in seq_along(1:10)) {
+for(i in seq_along(1:length(daft_codes))) {
   cat(daft_codes[[i]])
 }
 ```
