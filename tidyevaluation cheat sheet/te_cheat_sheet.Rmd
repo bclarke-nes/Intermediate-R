@@ -1,0 +1,182 @@
+---
+main_findings: '**Tidyevaluation cheat sheet**'
+date: 2023-04-18
+author:
+  - name: Brendan Clarke
+    affil: 1
+    email: brendan.clarke2@nhs.scot
+    main: true
+affiliation:
+  - num: 1
+    address: Digital Learning Lead, NHS Education for Scotland
+main_fontfamily: 'Garamond'
+primary_colour: '#124987'
+secondary_colour: '#009FE3'
+accent_colour: '#F1AF00'
+main_textcol: '#FFFFFF'
+body_textcol: '#000000'
+poster_height: '594mm'
+poster_width: '420mm'
+main_textsize: '180px'
+body_textsize: '20px'
+title_textsize: '36px'
+author_textsize: '27px'
+authorextra_textsize: '27px'
+caption_textsize: '14px'
+reference_textsize: '14px'
+affiliation_textsize: '14px'
+logoright_name: '../img/NES_logo.jpg'
+output:
+  posterdown::posterdown_betterport:
+    self_contained: TRUE
+    knit: pagedown::chrome_print
+---
+<!-- poster_content is bare rmarkdown used as a test for the poster_gen script -->
+<style>
+    code.sourceCode.r {
+      font-size: 12pt;
+    }
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, eval=F, warning = FALSE, message = FALSE, out.width='100%')
+library(pacman)
+p_load(tidyverse, NHSRdatasets, lubridate, kableExtra)
+```
+
+## Data masking
+Data masking is the term for the default tidyverse behaviour that allows us to refer to columns by unquoted names. So in tidyverse we can write:
+  
+```{r}
+ae_attendances %>%
+  filter(type == 1)
+```
+
+This is an alternative to the base R syntax for specifying columns, with quoted column names in double square brackets:
+  
+```{r}
+ae_attendances[["type"]]
+```
+
+Note that we can use base R syntax inside some tidyverse functions:
+  
+```{r}
+ae_attendances %>%
+  filter(ae_attendances[["type"]] == 1)
+```
+While data masking usually works well, allowing us to write cleaner code, there are some situations where it breaks down. This cheat sheet provides an overview of ways of avoiding data masking problems.
+
+## Pronouns
+Used to disambiguate which kind of object we are referring to. **.data[["type"]]** will refers to the *type* column from our data:
+  
+```{r}
+ae_attendances %>%
+  filter(.data[["type"]] == 1)
+```
+
+**.env[["type"]]** will refer to the *type* environmental variable:
+
+```{r}
+type <- 2
+
+ae_attendances %>%
+  filter(type == .env[["type"]]) # filters cases where the type column == 2
+```
+
+Pronouns prevent ambiguity, allowing us to work with clarity. This example has 3 objects named *type*:
+```{r}
+type <- 2 # global .env type = 2
+
+type_org <- function(type, org) { 
+  ae_attendances %>%
+    filter(.data[["type"]] == .env[["type"]] & .data[["org_code"]] == .env[["org"]]) 
+}
+
+type_org(1, "RF4")
+```
+
+
+## *{{var}}*
+
+*{{var}}* takes an unquoted argument, and converts it to a data variable. Most useful for specifying cols from functions:
+  
+```{r}
+col_greater <- function(col, n) {
+  ae_attendances %>%
+    filter({{col}} >= n)
+}
+col_greater(breaches, 5000)
+```
+
+Under the surface, *{{var}}* [defuses and injects](https://rlang.r-lib.org/reference/embrace-operator.html) the variable. You can also do the defuse and inject in separate steps:
+  
+```{r}
+col_greater_steps <- function(col, n) {
+  
+  new_col <- enquo(col)
+  
+  ae_attendances %>%
+    filter(!!new_col >= n) 
+}
+
+col_greater_steps(breaches, 7000)
+```
+
+
+## *:=* (name injection)
+
+*=* is fussy, and checks that it can evaluate the LHS of an expression. *:=* is less fussy
+
+Use *:=* with embracing to make col names from unquoted args:
+```{r}
+col_greater_maker <- function(col, n) {
+  ae_attendances %>%
+    select({{col}}) %>%
+    filter({{col}} >= n) %>%
+    rename("{{col}} over {{n}}" := {{col}})
+}
+col_greater_maker(attendances, 5000)
+```
+
+Use *:=* with glue syntax to make col names from quoted stuff:
+```{r}
+col_greater_maker <- function(col, n, name) {
+  ae_attendances %>%
+    select({{col}}) %>%
+    filter({{col}} >= n) %>%
+    rename("{name} over {{n}}" := {{col}})
+}
+col_greater_maker(attendances, 5000, "Bruce")
+
+```
+
+## Quasiquotation
+Use quasiquotation to deal with difficult cases that mix unquoted and quoted use
+
+This code won't work:
+```{r}
+col_quas <- function(col, n) {
+  ae_attendances %>%
+    summarise(col = sum(col))
+}
+try(col_quas("attendances"))
+```
+
+This code gives the correct value, but the wrong name:
+```{r}
+col_quas <- function(col, n) {
+  ae_attendances %>%
+    summarise(col = sum(!!sym(col)))
+}
+try(col_quas("attendances"))
+```
+
+Everything is as it should be. *!!sym(col)* defuses and injects the var:
+```{r}
+col_quas <- function(col) {
+  ae_attendances %>%
+    summarise(!!sym(col) := sum(!!sym(col)))
+}
+var <- "attendances"
+col_quas(var)
+```

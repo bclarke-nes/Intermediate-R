@@ -497,6 +497,7 @@ The aim here is to demonstrate how to write a loop that performs the same bit of
 Let's look at the example first, with no code, and then we'll work through each of the stages above to explain how all of the parts fit together.
 
 ### Example {.tabset}
+
 ```{r loop-ex, echo=F, fig.height=1.5, fig.width=4, results='asis'}
 # worth looking at the chunk headers for the example and explanation. We don't repeat the code in this section, but we just re-use the example chunk with different chunk options to show the code rather than the output. https://bookdown.org/yihui/rmarkdown-cookbook/reuse-chunks.html is a good place to start if this is of interest.
 
@@ -506,11 +507,11 @@ Let's look at the example first, with no code, and then we'll work through each 
 orgs_seq <- as.character(sample(ae_attendances %>% 
                                   distinct(org_code) %>% 
                                   arrange(org_code) %>% 
-                                  pull(), 10)
+                                  pull(), 20)
                          ) 
 
 # print a single header message outside the body of the loop telling the reader what to expect
-cat(glue("In this section we present a summary of admissions data, grouped by type of admission, for a sample of {length(orgs_seq)} organisations.  \n")) 
+cat(glue("In this section we present a summary of admissions data, grouped by type of admission, for a sample of {length(orgs_seq)} organisations.  \n  \n")) 
 
 # set up the main body of the loop
 for (i in seq_along(orgs_seq)) {
@@ -522,7 +523,7 @@ for (i in seq_along(orgs_seq)) {
             pull()
     
     # customised 4th level header containing org_code
-    cat(glue("  \n  \n#### {orgs_seq[i]} attendances  \n"))
+    cat(glue("  \n  \n#### {orgs_seq[i]} attendances  \n  \n"))
     
     # customised explanatory text
     cat(glue("Some explanatory text: {orgs_seq[i]} had a total of {org_total_admissions} admissions.  \n"))

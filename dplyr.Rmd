@@ -17,16 +17,19 @@ output:
     toc: yes
     toc_depth: '2'
     pandoc_args: ["--extract-media", "."]
+editor_options: 
+  chunk_output_type: console
 ---
 # Getting the best out of dplyr {.tabset}
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'asis')
+
+# package loading has been troublesome in Posit Cloud. First, memory constraints mean that the meta-package tidyverse loads unreliably, so tidyverse packages are loaded individually. Second, troubleshooting installation trips up trainees at the start of the sessions. pacman is therefore used to automate installation and loading. 
+
 install.packages(setdiff("pacman", rownames(installed.packages())))
 library("pacman")
-p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang, glue)
-
-# avoiding tidyverse due to memory issues in RStudio Cloud environment 
+p_load(dplyr,lubridate,stringr,NHSRdatasets, glue, tidyr, purrr, knitr,ggplot2, waldo)
 
 # function to add new window links
 link<-function(text,url) {
@@ -43,10 +46,10 @@ The aim of this session is to do three things with dplyr:
 
 This training session is part of a wider training programme designed as next steps for R users who have moved beyond introductory training. This programme covers:
 
-+ tidy evaluation
 + functions
-+ dplyr
++ iteration
 + purr
++ tidy evaluation
 
 This dplyr training can be taken as a stand-alone session, or integrated into a more involved programme with the other sessions. You can find further details on the `r link("TURAS page", "https://learn.nes.nhs.scot/64644")`, join the `r link("KIND Learning Network", "https://forms.office.com/r/WQdd6HSCEW")` for social learning support, or contact [Brendan Clarke](mailto: brendan.clarke2@nhs.scot?subject=Intermediate R training) with any queries, comments, or suggestions. You can also find the source code for this training on the `r link("GitHub repository", "https://github.com/bclarke-nes/Intermediate-R")`.
 
@@ -70,6 +73,16 @@ You should also have some basic experience of using R to manage data. This train
 
 Before we start, [Rstudio's dplyr cheatsheet](https://raw.githubusercontent.com/rstudio/cheatsheets/main/data-transformation.pdf){target="_blank"} is helpful to have at hand for quick reference and comparison of functions.
 
+### Ground rules
+
+Some ground rules for this training session:
+
+1. The training is **interactive**. You'll be working on code, answering questions, and helping other trainees. Do please ask questions whenever you like, or for extra clarification if anything isn't as clear as you'd like it to be. 
+
+2. Please leave **cameras and mics on** as much as you reasonably can. Social learning is a vital part of this training, and the more discussion and chat that we get, the better the sessions run.
+
+3. Things will go wrong, and code will misbehave. **Be ready to share your screen when this happens.** The aim is that we will all collaborate on solving any problems that we might run into. This is the best way of developing a set of strategies for solving problems which is such an important part of the learning journey in this field.
+
 ## NHS-R data {.tabset}
 
 Because dplyr provides tools for working with data, we'll need some suitable data to play with. R comes with lots of interesting data sets built-in, which you can explore using `data()`. To try and stick to the health and social care theme of this training though we'll use some health datasets put together by the `r link("NHS-R community", "https://nhsrcommunity.com/")`. You can find additional explanatory materials for these NHS data sets on `r link("CRAN", "https://cran.r-project.org/web/packages/NHSRdatasets/index.html")`, but the short version is that the `NHSRdatasets` package contains five datasets:
@@ -83,7 +96,6 @@ Because dplyr provides tools for working with data, we'll need some suitable dat
 Let's look at these datasets below. If you're following the code, you'll see that there are a couple of helper functions to simplify some of the display work here. We'll start to use these datasets in the next section:
 
 ```{r echo=F}
-
 # functions to stream-line displaying our data
 
 data_describer <- function(df) {
@@ -141,8 +153,7 @@ At its simplest, `slice()` is an alternative to head:
 ```{r echo=T}
 ae_attendances %>% 
   slice(1:6) %>%
-  knitr::kable()
-
+  kable()
 ```
 
 The number supplied to `slice()` returns that row - so `slice(3)` shows the third row. You can also provide a sequence or vector of rows:
@@ -150,21 +161,21 @@ The number supplied to `slice()` returns that row - so `slice(3)` shows the thir
 ```{r echo=T}
 ae_attendances %>% 
   slice(1:3) %>%
-  knitr::kable()
+  kable()
 
 ae_attendances %>% 
   slice(2,5,918) %>%
-  knitr::kable()
+  kable()
 ```
 
 More interestingly, you can `group_by()`, then slice, to see the first row of each group. Here, the data is filtered, grouped by org_code, then we slice the top row of each group:
 
 ```{r}
 ae_attendances %>%
-  filter(attendances >= 20000) %>%
+  filter(attendances >= 22000) %>%
   group_by(org_code) %>%
-  slice(n=1) %>%
-  knitr::kable()
+  slice(1) %>%
+  kable()
 ```
 
 (we'll explore `group_by()` later in the session, so don't worry if this is new to you)
@@ -174,21 +185,21 @@ The `slice_min()` and `slice_max()` functions are also useful, giving you someth
 ```{r}
 ae_attendances %>%
   slice_max(breaches, n=6) %>%
-  knitr::kable()
+  kable()
 
 # equivalent to
-
 ae_attendances %>%
   arrange(desc(breaches)) %>%
   slice(1:6) %>%
   knitr::kable()
 ```
+(note that you need to explicitly name the number of rows you want using `n=...`)
 
-While `slice_sample()` gives a random sampling of the data.
+`slice_sample()` gives a random sampling of the data.
 ```{r}
 ae_attendances %>%
   slice_sample(n=6) %>%
-  knitr::kable()
+  kable()
 ```
 
 There are also `slice_head()` and `slice_tail()` functions which work in the same way.
@@ -200,28 +211,6 @@ ae_attendances %>%
   slice(-1:-12760) %>%
   knitr::kable()
 ```
-
-#### Exercise
-
-Use `slice` on the ons_mortality data to:
-
-Show the 9th row:
-```{r}
-# write your code here
-```
-
-Show the 9th row:
-```{r}
-# write your code here
-```
-
-Select the even-numbered rows:
-```{r}
-# write your code here
-
-# hint - seq()
-```
-
 
 ### `glimpse()`
 
@@ -270,37 +259,14 @@ LOS_model %>%
   display()
 ```
 
-There's not much more to say about the basic `rename()` function beyond that. However, the scoped variant, `rename_with()` does provide some useful additional tools. For example, we can use `tolower()` - which converts strings to all lower-case - to rename multiple columns at once:
+There's not much more to say about the basic `rename()` function beyond that. However, the scoped variants, `rename_with()` and `rename_all()` provide some useful additional tools. For example, we can use `tolower()` - which converts strings to all lower-case - to rename multiple columns at once:
 
 ```{r}
 LOS_model %>% 
   rename_with(tolower) %>%
   display()
 ```
-`rename()` works well with tidyselect operators, which we'll cover briefly during this session. 
-We also have a stand-alone session on [tidy evaluation](https://dplyr.tidyverse.org/articles/programming.html), which covers this territory in more depth.
-
-#### Exercise
-
-There are lots of useful tools in the stringr package that can be used to change the case of text. However, for this exercise, let's borrow some code from the base-R `tolower()` manual page to create our own `capwords()` function that capitalises words:
-
-```{r results='markup'}
-capwords <- function(s, strict = FALSE) {
-    cap <- function(s) paste(toupper(substring(s, 1, 1)),
-                  {s <- substring(s, 2); if(strict) tolower(s) else s},
-                             sep = "", collapse = " " )
-    sapply(strsplit(s, split = " "), cap, USE.NAMES = !is.null(names(s)))
-}
-
-capwords(c("owl", "towel"))
-```
-
-Can you use `capwords()` to convert the synthetic_news_data column headings to title case?
-
-```{r}
-# write your code here
-
-```
+`rename()` works well with tidyselect operators, which we'll cover briefly during this session. We also have a stand-alone session on [tidy evaluation](https://dplyr.tidyverse.org/articles/programming.html), which covers this territory in more depth.
 
 ### `relocate()`
 
@@ -388,17 +354,6 @@ stranded_data %>%
   display()
 ```
 
-#### Exercise
-
-Here's a vector of partial names of unwanted columns from the synthetic_news_data set. Can you use `contains()` to remove these columns and display the result?
-
-```{r}
-unwanted_names <- substring(names(synthetic_news_data)[seq(1, 11, 2)], 1, 2)
-
-# write your code here.
-
-```
-
 
 ### `any_of()`
 
@@ -454,13 +409,13 @@ See also `last_col()`, which is another example of a tidyselect helper for speci
 This section introduces and explores four dplyr functions. Each of these are important, but their real strength comes from combining them to help summarise data. The functions are:
   
 + `group_by()`, which puts our data into groups
-+ `summarise()`, which gives us ways of summarising our data
++ `summarise()` and `reframe()`, which gives us ways of summarising our data
 + `count()`, which (surprise, surprise) counts our data
 + `tally()`, which counts our data in a slightly different way.
 
 We're also going to talk about `rowwise()`, which is a bit of an oddball function for working along rows, rather than the usual column-based approach that we take almost everywhere else in dplyr. The reason we're going to talk about it here is that it's an important tool for producing aggregates along rows (say, an average of several measures).
 
-### `group_by()` and `summarise()`
+### `group_by()`
 
 Let's start with `group_by()`. `group_by()` is an odd function because, at first glance, it doesn't seem to do anything at all:
 
@@ -497,7 +452,7 @@ ae_attendances %>%
   display()
 ```
   
-we'll deal with `count()` more fully in the next subsection. One last thing to note here though: `ungroup()` removes groupings:
+we'll deal with `count()` more fully in a later subsection. One last thing to note here though: `ungroup()` removes groupings:
 
 ```{r}
 ae_attendances %>% 
@@ -507,11 +462,11 @@ ae_attendances %>%
   display()
 ```
 
-For now though, we'll look at `summarise()`.
+### `summarise()`
 
 The description on the `r link("dplyr reference page for summarise", "https://dplyr.tidyverse.org/reference/summarise.html")` is admirably clear:
 
-> summarise() creates a new data frame. It will have one (or more) rows for each combination of grouping variables; if there are no grouping variables, the output will have a single row summarising all observations in the input. It will contain one column for each grouping variable and one column for each of the summary statistics that you have specified.
+> summarise() creates a new data frame. It returns one row for each combination of grouping variables; if there are no grouping variables, the output will have a single row summarising all observations in the input. It will contain one column for each grouping variable and one column for each of the summary statistics that you have specified.
 
 ```{r}
 ae_attendances %>% 
@@ -558,44 +513,27 @@ ae_attendances %>%
 
 ```
 
+### `reframe()`
+A recent change in dplyr 1.1.0 is that `summarise()` now will only return one row per group. A new function, `reframe()`, has been developed to produce multiple-row summaries. It works exactly like `summarise()` except, rather than removing one grouping layer per operation, it always returns an ungrouped tibble. The syntax is the same as `summarise()`:
 
-#### Exercise
+```{r results='markup'}
+sum <- ae_attendances %>%
+  group_by(year = floor_date(period, unit = "year")) %>%
+  summarise(
+    year = year(year),
+    non_admissions = sum(attendances - admissions)
+  )
 
-That's quite a lot of explanation. Let's try some simple group-and-summarise activities at this point.
+ref <- ae_attendances %>%
+  group_by(year = floor_date(period, unit = "year")) %>%
+  reframe(
+    year = year(year),
+    non_admissions = sum(attendances - admissions)
+  )
 
-First, let's take the ons_mortality, which is a bit more complicated than the ae_attendances data we've been using so far. One of the things that makes it complicated is that it has two different classification categories applied. So let's `group_by()` each of the two category variables, and then summarise:
-
-```{r}
-# write your code here
+waldo::compare(sum, ref)
 ```
 
-Now that we've found out what each of these two categories contain, let's look at one category in more detail - "Total deaths". First, let's `filter()` that "Total deaths" group out to find out how much data we're dealing with:
-
-```{r}
-# write your code here
-
-```
-
-Still too many to read and make sense of! Let's now `group_by()` category_2, then summarise by summing the count column:
-
-```{r}
-# write your code here
-
-```
-
-That gives us a different problem, in that we've summed together the full time period of the two different categories. So let's add a year to the grouping:
-
-```{r}
-# write your code here
-
-```
-
-Now that you've got this neat summary data, can you plot it into a column graph using `ggplot()`?
-
-```{r}
-# write your code here
-
-```
 
 ### `count()` and `tally()`
 
@@ -666,11 +604,10 @@ synthetic_news_data %>%
 `add_tally()` gives a col with the same value in each row of a group:
 
 ```{r}
-
 synthetic_news_data %>%
   group_by(died) %>%
   add_tally() %>%
-  slice(n=1:3) %>%
+  slice(1:3) %>%
   display()
 ```
 
@@ -719,6 +656,8 @@ To demonstrate how joins work in dplyr, we need to start with some suitable data
 We'll set up some extremely simple data using `tribble()` to demonstrate how the joins work:
 
 ```{r}
+
+# Ideally change to x and y to fit pictures
 simple_a <- tribble(
   ~category, ~value, ~key,
   "a",5,3,
