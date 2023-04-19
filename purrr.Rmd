@@ -167,13 +167,13 @@ short_org_codes <- ae_attendances %>%
 Note that we can happily use more than three organisations if we need to, although this will make for a slower knit, and a longer output document. Once we have our vector of organisations, applying our function to each is easy:
 
 ```{r results='markup'}
-purrr::map(short_org_codes, non_admissions)
+purrr::map(.x = short_org_codes, .f = non_admissions)
 ```
 
 As long as our function only takes one argument, we can use *any* function in this call to `map()`. We can even create a one-off anonymous function (which we should properly call a *formula*) inside the call to `map()`:
 
-```{r}
-daft_codes <- map(short_org_codes, ~ glue("ThIs OrG CoDe iS {.x}  \n  \n"))
+```{r results='markup'}
+daft_codes <- map(.x = short_org_codes, ~ glue("ThIs OrG CoDe iS {.x}  \n  \n"))
 daft_codes
 ```
 
@@ -183,7 +183,7 @@ In this formula, we use `glue()` to create a short string from each item in shor
 class(daft_codes)
 ```
 
-If you've never worked with lists in R before, a few words of introduction might be useful. Lists are a data structure that allow you to store different data types together. If we look at the `daft_codes` list that we just created using `summary()`, we can see that it's made up of 10 sublists, each with a single entry:
+If you've never worked with lists in R before, a few words of introduction might be useful. Lists are a data structure that allow you to store different data types together. If we look at the `daft_codes` list that we just created using `summary()`, we can see that it's made up of three sublists, each with a single entry:
 
 ```{r results='markup'}
 summary(daft_codes)
@@ -191,14 +191,14 @@ summary(daft_codes)
 
 If we want to access the contents of our list, we use `[]` to access the sublists, and `[[]]` to access the contents of those sublists:
 
-```{rresults='markup'}
+```{r results='markup'}
 daft_codes[1] # returns everything in the first sublist
 daft_codes[[1]] # returns just the first item in the first sublist
 ```
 
 And you can access the contents of the list in all the ways you might expect. For instance, we can iterate using a for-loop:
 
-```{r}
+```{r results='markup'}
 for(i in seq_along(1:length(daft_codes))) {
   cat(daft_codes[[i]])
 }
@@ -253,39 +253,43 @@ non_admissions_v <- function(single_org_code) {
   }
 ```
 
-Our new function just returns the total non-admissions for the year 2018. Let's use `map_dbl()` and `map_chr()` to return a vector of doubles and characters respectively:
+Our new function just returns the total non-admissions for the year 2018. Let's use `map_dbl()` to return a vector of doubles:
 
 ```{r results='markup'}
 #dbl for doubles - ordinary decimal numbers
 map_dbl(short_org_codes, non_admissions_v)
+```
+
+If our function returns a character vector we can use `map_chr()`:
+
+```{r results='markup}
+non_admissions_c <- function(...) {
+  non_admissions_v(...) %>%
+    as.character()
+  }
 
 #chr for character
-map_chr(short_org_codes, non_admissions_v)
+map_chr(short_org_codes, non_admissions_c)
 ```
 
 We'll need to tweak our function again to demonstrate the other variants:
 
 ```{r results='markup'}
 
-non_admissions_int <- function(single_org_code) {
-  non_admissions(single_org_code) %>% 
-    filter(year == "2018") %>% 
-    pull() %>% 
-    sum() %>% 
+non_admissions_int <- function(...) {
+  non_admissions_v(...) %>%
     as.integer()    # to convert the result to integer
-  }
+}
 
 #int for integers
 map_int(short_org_codes, non_admissions_int)
 
 #lgl for logical (true/false)
-non_admissions_lgl <- function(single_org_code) {
-  non_admissions(single_org_code) %>% 
-    filter(year == "2018") %>% 
-    pull() %>% 
-    sum() %>% 
-    as.logical()  # to convert the result to logical
-  }
+non_admissions_lgl <- function(...) {
+  result <- non_admissions_v(...)
+  
+  result[1] %% 2 == 0 # to test if the answer is even
+}
 
 map_lgl(short_org_codes, non_admissions_lgl)
 ```
@@ -326,7 +330,7 @@ Can you use the appropriate flavour of `map_whatever()` to produce a sensible ou
 ```{r} 
 map_dfr(short_org_codes, non_admissions) %>% 
   head() %>% 
-  knitr::kable()
+  kable()
 ```
 
 My favourite application for this is when using `read_csv()` over a directory of files, like we have in the "./data/sign_up_1" directory of this project:
@@ -338,7 +342,7 @@ files <- list.files("./data/sign_up_1", full.names = T)
 files %>% 
   map_dfr(read_csv) %>%
   head() %>%
-  knitr::kable()
+  kable()
 
 # the slightly more involved version, wrapping read_csv into a new function to allow indexing
 labeller <- function(file) {
@@ -348,7 +352,7 @@ labeller <- function(file) {
 files %>% 
   map_dfr(labeller) %>%
   head() %>%
-  knitr::kable()
+  kable()
 ```
 
 There's also a matching `map_dfc()`, which column-binds the individual tibbles together. This is more finicky than `map_dfc()`, and won't work if you have e.g. different numbers of rows in the tibbles. As a proof-of-concept:
@@ -358,7 +362,7 @@ random_nonsense <- function(name) {
   tibble({{name}} := rnorm(1:5))
 }
 
-map_dfc(letters[1:7], random_nonsense) %>% knitr::kable()
+map_dfc(letters[1:7], random_nonsense) %>% kable()
 ```
 
 Alternatively, you can either:
@@ -371,7 +375,7 @@ files %>%
   map_dfr(labeller) %>%
   pivot_wider(id_cols = c(email, reg_date), names_from = file_name, values_from = consent) %>%
   head() %>%
-  knitr::kable()
+  kable()
 ```
 
 ## `walk()` introduction
@@ -436,7 +440,6 @@ So `admission_graphs()` prints a graph with appropriate Rmarkdown headers if the
 ```{r fig.height=2, fig.width=6}
 walk(short_org_codes, admission_graphs)
 ```
-
 
 ## `map2()`
 

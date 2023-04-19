@@ -1,0 +1,142 @@
+---
+title: "![](../img/header.png) Intermediate R"
+author: "Brendan Clarke"
+date: "2022-10-22"
+always_allow_html: true
+output:
+  html_document: 
+    toc_depth: 2
+    toc_float:
+      collapsed: no
+    fig_width: 6
+    fig_height: 2
+  word_document:
+    toc: yes
+    toc_depth: '2'
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+    pandoc_args: ["--extract-media", "."]
+editor_options: 
+  chunk_output_type: inline
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'asis')
+install.packages(setdiff("pacman", rownames(installed.packages())))
+library("pacman")
+p_load(dplyr,lubridate,stringr,NHSRdatasets, glue, tidyr, purrr, knitr, ggplot2)
+```
+
+# dplyr exercises {.tabset}
+
+## `slice()`
+Use `slice` on the ons_mortality data to:
+
+Show the 9th row:
+```{r}
+# add your code here
+```
+
+Select the even-numbered rows:
+```{r results='asis'}
+# add your code here
+```
+
+## `rename()`
+
+There are lots of useful tools in the stringr package that can be used to change the case of text. However, for this exercise, let's borrow some code from the base-R `tolower()` manual page to create our own `capwords()` function that capitalises words:
+
+```{r results='markup'}
+capwords <- function(s, strict = FALSE) {
+    cap <- function(s) paste(toupper(substring(s, 1, 1)),
+                  {s <- substring(s, 2); if(strict) tolower(s) else s},
+                             sep = "", collapse = " " )
+    sapply(strsplit(s, split = " "), cap, USE.NAMES = !is.null(names(s)))
+}
+
+capwords(c("owl", "towel"))
+```
+
+Can you use `capwords()` to convert the synthetic_news_data column headings to title case?
+
+```{r}
+# add your code here
+```
+
+## `contains()`
+
+Here's a vector of partial names of unwanted columns from the synthetic_news_data set. Can you use `contains()` to remove these columns and display the result?
+
+```{r}
+unwanted_names <- substring(names(synthetic_news_data)[seq(1, 11, 2)], 1, 2)
+
+# add your code here
+```
+## `summarise()`
+
+First, let's take the `ons_mortality` data set, which is a bit more complicated than the `ae_attendances` data we've been using so far. One of the things that makes it complicated is that it has two different classification categories applied. So let's `group_by()` each of the two category variables, and then summarise by `sum()` of counts:
+
+```{r}
+# add your code here
+```
+
+Now that we've found out what each of these two categories contain, let's look at one category in more detail - "Total deaths". First, let's `filter()` the data to just show "Total deaths" group out to find out how much data we're dealing with:
+
+```{r}
+# add your code here
+```
+
+Still too many to read and make sense of! Let's take that filtered data, `group_by()` category_2, then summarise by summing the count column:
+
+```{r}
+# add your code here
+```
+
+That gives us a different problem, in that we've summed together the full time period of the two different categories. So let's add a year to the grouping:
+
+```{r}
+# add your code here
+```
+
+Now that you've got this neat summary data, can you plot it into a column graph using `ggplot()`?
+
+```{r}
+# add your code here
+```
+
+## joins
+
+Here are two tibbles containing imaginary creatinine measurements from two imaginary NHS boards. They each contain an `id` column, corresponding to a patient id:
+```{r}
+NHSa <- tibble(
+  creat = sample(53:115, 100, replace=T),
+  id = sample(seq(from=200, to=800, by=2), 100, replace=F)
+)
+
+NHSb <- tibble(
+  creat = sample(53:115, 100, replace=T),
+  id =sample(seq(from=200, to=800, by=2), 100, replace=F)
+)
+```
+
+Please join the tibbles...
+
+1. to give only results from patients who had creatinine measured in both boards:
+```{r}
+# add your code here
+```
+
+2. all those measured in NHSa, with any matching values from NHSb
+```{r}
+# add your code here
+```
+
+3. measured in NHSa only, and never in NHSb
+```{r}
+# add your code here
+```
+
+4. all patients, joining NHSa and NHSb where possible
+```{r}
+# add your code here
+```
