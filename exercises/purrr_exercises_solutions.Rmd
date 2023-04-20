@@ -1,0 +1,91 @@
+---
+title: "![](../img/header.png) Intermediate R"
+author: "Brendan Clarke"
+date: "2022-10-22"
+always_allow_html: true
+output:
+  html_document:
+    toc: no
+    toc_depth: 2
+    number_sections: no
+    toc_float:
+      collapsed: no
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+    pandoc_args: ["--extract-media", "."]
+  word_document:
+    toc: yes
+    toc_depth: '2'
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r echo=F, warning=F, message=F}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'markdown')
+install.packages(setdiff("pacman", rownames(installed.packages())))
+library("pacman")
+p_load(tidyr,readr,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang, glue, knitr)
+
+```
+
+# purrr exercises - solutions {.tabset}
+
+## `map()`
+In this exercise, you'll do three things:
+
+1. Take the supplied territorial NHSS boards, and create a suitably named vector of names.
+2. Write a short function (using `glue()` or `paste()`) to take a supplied argument, and add the phrase "Results for " to the start of that supplied argument
+3. Finally, use `map()` to create a list of NHS boards containing "Results for x" for each of the boards
+
+```{r}
+# make a vector of names of the regional NHS boards
+territorial_boards <- c("NHS Ayrshire and Arran", "NHS Borders", "NHS Dumfries and Galloway", "NHS Fife", "NHS Forth Valley", "NHS Grampian", "NHS Greater Glasgow and Clyde", "NHS Highland", "NHS Lanarkshire", "NHS Lothian", "NHS Orkney", "NHS Shetland", "NHS Tayside", "NHS Western Isles")
+
+# write a simple function to add the phrase "Results for " to the start of the supplied argument
+add_results <- function(board) {
+  glue("Results for {board}")
+}
+
+# then use map() to apply that function over the vector of names
+map(.x = territorial_boards, .f = add_results) 
+
+# there are some nice helpers in purrr to transform lists if needed. See https://purrr.tidyverse.org/reference/list_c.html:
+
+map(.x = territorial_boards, .f = add_results) %>%
+  list_c() # to a vector
+```
+
+## `map_chr() and friends`
+
+Here are four functions:
+```{r}
+
+mystery_machine_1 <- function(argument) {
+  str_to_upper(argument)
+  }
+
+mystery_machine_2 <- function(argument) {
+  as.logical(str_length(argument) %% 2)
+  }
+
+mystery_machine_3 <- function(argument) {
+  str_length(argument)
+  }
+
+mystery_machine_4 <- function(argument) {
+  nchar(gsub("[^aeiou]", "", argument)) / nchar(argument)
+  }
+```
+
+Can you use the appropriate flavour of `map_whatever()` to produce a sensible output for each of the functions from the `territorial_boards` vector that we created earlier?
+
+```{r}
+
+territorial_boards <- c("NHS Ayrshire and Arran", "NHS Borders", "NHS Dumfries and Galloway", "NHS Fife", "NHS Forth Valley", "NHS Grampian", "NHS Greater Glasgow and Clyde", "NHS Highland", "NHS Lanarkshire", "NHS Lothian", "NHS Orkney", "NHS Shetland", "NHS Tayside", "NHS Western Isles")
+
+map_chr(.x = territorial_boards, .f = mystery_machine_1)
+map_lgl(.x = territorial_boards, .f = mystery_machine_2)
+map_int(.x = territorial_boards, .f = mystery_machine_3)
+map_dbl(.x = territorial_boards, .f = mystery_machine_4)
+```

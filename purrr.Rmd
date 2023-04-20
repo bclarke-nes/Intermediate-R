@@ -57,15 +57,16 @@ graph TD
   do[What do you want to do?]
   return(Return something)
   display(Display something)
-
+  cbind(map + list_cbind)
+  rbind(map + list_rbind)
 list --> map
 do --> return
 return -->  tibble
 return -->  vector
 return --> list
 
-tibble --> map_dfc
-tibble --> map_dfr
+tibble --> rbind
+tibble --> cbind
 vector --> map_chr
 vector --> map_dbl
 vector --> map_lgl
@@ -74,6 +75,8 @@ do --> display
 display --> walk
 ")
 ```
+
+![](img/purrr.png)
 
 `walk()` displays things, while `map()` returns things. So if you want to draw a series of graphs, you'll be using `walk()` or one of its relatives. On the other hand, if you want to return some data to another function, you'll use `map()` or one of its relatives.
 
@@ -177,6 +180,12 @@ daft_codes <- map(.x = short_org_codes, ~ glue("ThIs OrG CoDe iS {.x}  \n  \n"))
 daft_codes
 ```
 
+You might also see anonymous functions expressed using `\(x)` in very recent bits of R code. This should be equivalent to the formula above using `~`:
+```{r results="markup"}
+daft_codes <- map(.x = short_org_codes, \(x) glue("ThIs OrG CoDe iS {x}  \n  \n"))
+daft_codes
+```
+
 In this formula, we use `glue()` to create a short string from each item in short_org_codes. These individual items are represented using the shorthand `.x`. We then assign the results into a `list`:
 
 ```{r results='markup'}
@@ -207,23 +216,6 @@ for(i in seq_along(1:length(daft_codes))) {
 And - no surprise given the topic of this training - we can incorporate bits of the list into our Rmarkdown, like this: **`r daft_codes[[2]]`**
 
 In the next section, we'll experiment with some of the related functions that give different outputs, but work in the exact same way: provide a vector and a function, and `map()` will apply that function over each member of the vector.
-
-### Exercise
-
-In this exercise, you'll do three things:
-
-1. Take the supplied regional NHSS boards, and create a suitably named vector of names.
-2. Write a short function (using `glue()` or `paste()`) to take a supplied argument, and add the phrase "Results for " to the start of that supplied argument
-3. Finally, use `map()` to create a list of NHS boards containing "Results for x" for each of the boards
-
-```{r}
-# make a vector of names of the regional NHS boards
-# c("NHS Ayrshire and Arran", "NHS Borders", "NHS Dumfries and Galloway", "NHS Fife", "NHS Forth Valley", "NHS Grampian", "NHS Greater Glasgow and Clyde", "NHS Highland", "NHS Lanarkshire", "NHS Lothian", "NHS Orkney", "NHS Shetland", "NHS Tayside", "NHS Western Isles")
-
-# write a simple function to add the phrase "Results for " to the start of the supplied argument
-
-# then use map() to apply that function over the vector of names
-```
 
 ## `map()` variants {.tabset}
 
@@ -294,41 +286,27 @@ non_admissions_lgl <- function(...) {
 map_lgl(short_org_codes, non_admissions_lgl)
 ```
 
-#### Exercise
+### `map_vec()`
 
-Here are four functions:
-```{r}
-
-mystery_machine_1 <- function(argument) {
-  str_to_upper(argument)
-  }
-
-mystery_machine_2 <- function(argument) {
-  as.logical(str_length(argument) %% 2)
-  }
-
-mystery_machine_3 <- function(argument) {
-  str_length(argument)
-  }
-
-mystery_machine_4 <- function(argument) {
-  nchar(gsub("[^aeiou]", "", argument)) / nchar(argument)
-  }
-```
-
-Can you use the appropriate flavour of `map_whatever()` to produce a sensible output for each of the functions from the `regional_boards` vector that we created earlier?
+If you don't know what kind of vector you'll need to supply, you can use `map_vec()`, which returns a vector to match the output from the function:
 
 ```{r}
-# write your code here
-
+map_vec(short_org_codes, non_admissions_v)
+map_vec(short_org_codes, non_admissions_c)
+map_vec(short_org_codes, non_admissions_int)
+map_vec(short_org_codes, non_admissions_lgl)
 ```
 
-### `map_dfr()` and `map_dfc()`
 
-`map_dfr()` is fantastically useful. It takes a function, applies it to the usual vector, and then *row binds the output* into a single big tibble: 
+### `list_rbind()` and `list_cbind()`
+
+These were previously standalone `map` variants called `map_dfr()` and `map_dfc()`. Those functions are still available, but the `r link("purrr manual", "https://purrr.tidyverse.org/reference/map_dfr.html")` recommends switching to the new `list_whatever` formulations to avoid some tricky edge-cases.
+
+`list_rbind()` is fantastically useful. It takes the list output of `map`, and *row binds the output* into a single big tibble: 
 
 ```{r} 
-map_dfr(short_org_codes, non_admissions) %>% 
+map(short_org_codes, non_admissions) %>% 
+  list_rbind() %>%
   head() %>% 
   kable()
 ```
@@ -340,7 +318,8 @@ My favourite application for this is when using `read_csv()` over a directory of
 files <- list.files("./data/sign_up_1", full.names = T)
 
 files %>% 
-  map_dfr(read_csv) %>%
+  map(read_csv) %>%
+  list_rbind() %>%
   head() %>%
   kable()
 
@@ -350,29 +329,33 @@ labeller <- function(file) {
 }
 
 files %>% 
-  map_dfr(labeller) %>%
+  map(labeller) %>%
+  list_rbind() %>%
   head() %>%
   kable()
 ```
 
-There's also a matching `map_dfc()`, which column-binds the individual tibbles together. This is more finicky than `map_dfc()`, and won't work if you have e.g. different numbers of rows in the tibbles. As a proof-of-concept:
+There's also a matching `list_cbind()`, which column-binds the individual tibbles together. This is more finicky than `list_cbind()`, and won't work if you have e.g. different numbers of rows in the tibbles. As a proof-of-concept:
 
 ```{r}
 random_nonsense <- function(name) {
   tibble({{name}} := rnorm(1:5))
 }
 
-map_dfc(letters[1:7], random_nonsense) %>% kable()
+map(letters[1:7], random_nonsense) %>% 
+  list_cbind() %>%
+  kable()
 ```
 
 Alternatively, you can either:
 
 + use dplyr's `left_join()`, or
-+ `map_dfr()` and then pivot the data:
++ `map() + list_rbind()` and then pivot the data:
 
 ```{r}
 files %>% 
-  map_dfr(labeller) %>%
+  map(labeller) %>%
+  list_rbind() %>%
   pivot_wider(id_cols = c(email, reg_date), names_from = file_name, values_from = consent) %>%
   head() %>%
   kable()
@@ -459,20 +442,22 @@ map2(short_org_codes, "2018", non_admissions_year)
 
 ```
 
-Again, that gives us a list as output - but all the `map()` variants that we discussed earlier will work in exactly the same way. A lovely, and useful, application for this `map2` and friends comes when we find that we'd like to specify how many rows of our .csv files we'd like to skip (perhaps because they have nonsense headers). I've added some of these to the /data/sign_up_2 folder. These are identical to the data files that we loaded using `map_dfr()`, but have a line of gibberish at the start, which we'll need to exclude. Their format is as follows:
+Again, that gives us a list as output - but all the `map()` variants that we discussed earlier will work in exactly the same way. A lovely, and useful, application for this `map2` and friends comes when we find that we'd like to specify how many rows of our .csv files we'd like to skip (perhaps because they have nonsense headers). I've added some of these to the /data/sign_up_2 folder. These are identical to the data files that we loaded using `list_rbind()`, but have a line of gibberish at the start, which we'll need to exclude. Their format is as follows:
 
 1. `a row of utter nonsense` (some nonsense)
 2. `reg_date,consent,email` (the headers we want)
 3. `01/08/2022,Yes,3357@nhs.scot` (the data we want)
 4. `...` (more data)
 
-If we try to `map_dfr()` over these files, we'll end up with a problem, because `read_csv()` will assume that all our data is in a single column:
+If we try to `map() + list_rbind()` over these files, we'll end up with a problem, because `read_csv()` will assume that all our data is in a single column:
 
 ```{r}
-list.files("./data/sign_up_2", full.names = T) %>% 
-  map_dfr(read_csv) %>%
-  head() %>%
-  knitr::kable()
+try(list.files("./data/sign_up_2", full.names = T) %>%
+      map(read_csv) %>%
+      list_rbind() %>%
+      head() %>%
+      kable()
+)
 ```
 
 Luckily, we can specify a number of rows to skip via the `skip` argument of `read_csv()`. We'll wrap this into a new two-argument function called `labeller_skips()`:
@@ -483,20 +468,22 @@ labeller_skips <- function(file, skip_rows=0) {
 }
 ```
 
-We can then `map2_dfr()`. We would usually specify each of the arguments using `.x` and `.y`. Note that here, `map2_dfr()` will assume that the list that we pipe to it from `list.files` will contain the first argument, so we can safely omit the `.x`:
+We can then `map2()`. We would usually specify each of the arguments using `.x` and `.y`. Note that here, `map2()` will assume that the list that we pipe to it from `list.files()` will contain the first argument, so we can safely omit the `.x`:
 
 ```{r}
 list.files("./data/sign_up_2", full.names = T) %>% 
-  map2_dfr(.y=1, labeller_skips) %>%
+  map2(.y=1, labeller_skips) %>%
+  list_rbind() %>%
   head() %>%
-  knitr::kable()
+  kable()
 ```
 
-And, again, we can immediately set the tibble created by `map2_dfr()` to work - here's a quick example where we group the data into weeks, and then plot the number of sign-ups by week:
+And, again, we can immediately set the tibble created by `map2() + list_rbind()` to work - here's a quick example where we group the data into weeks, and then plot the number of sign-ups by week:
 
 ```{r fig.height=2, fig.width=5}
 list.files("./data/sign_up_2", full.names = T) %>% 
-  map2_dfr(.y=1, labeller_skips) %>%
+  map2(.y=1, labeller_skips) %>%
+  list_rbind() %>%
   mutate(reg_week = floor_date(dmy(reg_date), unit="weeks")) %>%
   group_by(reg_week) %>%
   summarise(signups = n(), month=unique(file_name)) %>%
