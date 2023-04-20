@@ -1,0 +1,166 @@
+---
+title: "![](../img/header.png) Intermediate R"
+author: "Brendan Clarke"
+date: "2022-10-22"
+always_allow_html: true
+output:
+  html_document: 
+    toc_depth: 2
+    toc_float:
+      collapsed: no
+    fig_height: 2
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+    pandoc_args: ["--extract-media", "."]
+  word_document:
+    toc: yes
+    toc_depth: '2'
+---
+
+```{r echo=F, warning=F, message=F}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'asis')
+install.packages(setdiff("pacman", rownames(installed.packages())))
+library("pacman")
+p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang,glue, knitr)
+```
+
+# Functions exercises {.tabset}
+
+## First functions
+Try calling the `my_fun()` function yourself below. Start by changing the name (in the brackets). What happens if you supply something other than a name? What happens if you supply more than one name using `c()`?
+
+```{r}
+my_fun <- function(user_name) {
+  cat(glue("**Hello {user_name}, welcome to the wonderful world of functions**  \n  \n"))
+}
+
+# write your code below
+
+```
+
+Now try changing the message that `my_fun()` produces. Keep it clean!
+
+```{r}
+# write your code below
+```
+
+## Function syntax
+
+### Exercise (name)
+
+`my_fun()` is not a good function name. Try re-writing the function below with a more useful name. Some pointers for good names:
+
++ they should be verbs explaining what the function does
++ they should be short, to prevent you regretting your life choices when typing them
++ use snake_case or camelCase to facilitate reading (otherwise you'll be peering at `aeattendancegraphmakerwithorgandvaroptions("RF4")` in a few months trying to make sense of what it means)
+
+```{r}
+# write your code below
+
+```
+
+### Exercise (arguments)
+
+Now let's think about arguments. We've got one argument already in our function. Can you update it to add a second argument - `job_title` - so that our function now includes the `user_name`'s job in the greeting? I've included the original `my_fun()` below - feel free to change the name to your preferred version too.
+
+```{r}
+# write your code below
+```
+
+### Exercise (body)
+
+Finally, let's do something a bit more interesting in the body of our function. Here's a little bit of code that takes a user name and job title, then counts letters and vowels in the user name, then outputs a little message containing the name, job title, and counts of letters and vowels:
+
+```{r eval=F}
+user_name <- c("Albertine D. Marmot")
+job_title <- c("Data analyst")
+name_chars <- nchar(user_name)
+name_vowels <- nchar(gsub("[^aeiou]", "", user_name))
+cat(glue(
+      "Hello {user_name} the {job_title}. Welcome to the KIND Learning Network R training session on functions. Through the power of this function, I'm delighted to report that your name has {name_chars} letters, of which {name_vowels} are vowels. Welcome to the wonderful world of functions!  \n  \n"
+    ))
+```
+
+In this exercise, you'll:
+
+1. Copy/paste your updated function from the code block in the previous exercise
+2. Rename the function to something more suitable
+3. Update the function using the new code above
+4. Test it by calling it with a couple of different user names
+
+```{r}
+# write your code below
+
+```
+
+## Using functions
+
+Below is the `range_o_matic()` that gives us the range of the `admissions` variable in `ae_attendances`. Can you tweak the function so that it gives us the range of the `attendances` variable instead?
+
+```{r results='markup'}
+
+range_o_matic <- function() {
+  ae_attendances %>%
+  pull(admissions) %>%
+  range()
+}
+
+# write your code below
+
+```
+
+## Translating code into functions
+
+Can you build your own function along the lines of `diff_sum`? I'll start you off with some working code:
+
+```{r}
+raw_data <- c(3,11,8,4,7,5,2,9,6,3,45,2)    # our numbers
+mean_raw_data <- round(mean(raw_data), 2)   # the mean of all the numbers
+sd_raw_data <- round(sd(raw_data), 2)       # the standard deviation of the numbers
+cat(glue("The mean of our data is {mean_raw_data} and the standard deviation is {sd_raw_data}")) # output
+```
+
+A suggestion for approaching this exercise:
+
+1. start with the bare-bones of the function syntax
+2. copy all the code inside the function
+3. review the code, so that instead of `raw_data` being hard-coded, we use an argument to pass the numbers to the function
+4. test your working function with a selection of numbers
+
+```{r}
+# write your code below
+```
+
+## Conditional execution
+
+Try testing the `admissions_graph()` function below with some of the other org_code values from `ae_attendances`. Could you generate a list of orgs which will produce graphs (this is a test of your dplyr skills, rather than functions).
+
+```{r results='markup'}
+
+admissions_graph <- function(org_code_arg) {
+  
+  if (nrow(ae_attendances %>% filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}})) == 0) {
+    
+    cat(glue("No data exists for {org_code_arg}.  \n"))
+  
+    } else{
+  
+      cat(glue("  \n  \n### Results for {org_code_arg}  \n  \n"))
+  
+  print(ae_attendances %>% 
+    filter(admissions < 5 & breaches >= 400 & org_code == {{org_code_arg}}) %>%
+    group_by(year = year(period), month = month(period)) %>%
+    mutate(end = period+days_in_month(month)-1) %>%
+    arrange(year, month) %>%
+    ggplot() +
+    geom_rect(aes(xmin=period, xmax=end, ymin=0, ymax=attendances)) +
+    labs(title= glue("{org_code_arg} admissions for months with < 5 admissions and > 400 breaches")) +
+    scale_x_date(limits=ymd("2016-04-01", "2019-03-01")) )
+  cat('  \n  \n')
+    }
+}
+
+# write your code below
+
+```

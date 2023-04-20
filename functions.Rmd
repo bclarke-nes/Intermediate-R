@@ -22,7 +22,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'asis')
 install.packages(setdiff("pacman", rownames(installed.packages())))
 library("pacman")
-p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang,glue)
+p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang,glue, knitr)
 
 # function to add new window links
 link<-function(text,url) {
@@ -141,14 +141,6 @@ my_fun("Susan")
 
 So our function produces a bit of Rmarkdown that prints the supplied user name. Let's now spend some time working with this simple function.
 
-### Exercise
-Try calling the `my_fun()` function yourself below. Start by changing the name (in the brackets). What happens if you supply something other than a name? What happens if you supply more than one name using `c()`?
-
-```{r}
-# call my_fun() here
-
-```
-
 ----
 
 Now let's try something else. Let's re-work our function so that it prints a different message. I've supplied the existing code below. A quick word of explanation in case you haven't done much with with Rmarkdown before:
@@ -159,18 +151,6 @@ Now let's try something else. Let's re-work our function so that it prints a dif
 
 Note the **two** spaces before the `\n` - these are absolutely necessary to make the new line (and personally a major bugbear when troubleshooting Rmarkdown output).
 
-### Exercise
-
-```{r}
-# change the message that my_fun() prints - keep it as clean as you can, please!
-
-my_fun <- function(user_name) {
-  cat(glue("**Hello {user_name}, welcome to the wonderful world of functions**  \n  \n"))
-}
-
-my_fun("Susan")
-```
-
 ## Function syntax
 
 The function manual page found using `?function` is not very illuminating, particularly when you're starting to learn how to write functions. I think that the `r link("R4DS chapter on functions", "https://r4ds.had.co.nz/functions.html")` that we've already mentioned does a much better job of explaining the building blocks of functions in R. These are:
@@ -178,65 +158,6 @@ The function manual page found using `?function` is not very illuminating, parti
 1. A memorable name, to make it easy to understand what a function that you're using does
 2. Some arguments, which you pass to the function (like "Susan" at the end of the code block above)
 3. A body, which contains the code that does the work of the function
-
-We'll work through three exercises now to reinforce those elements.
-
-### Exercise (name)
-
-`my_fun()` is not a good function name. Let's spend 2 minutes brainstorming some better names, and then you should re-write the function below with a more useful name. Some pointers for good names:
-
-+ they should be verbs explaining what the function does
-+ they should be short, to prevent you regretting your life choices when typing them
-+ use snake_case or camelCase to facilitate reading (otherwise you'll be peering at `aeattendancegraphmakerwithorgandvaroptions("RF4")` in a few months trying to make sense of what it means)
-
-```{r}
-# re-write your renamed function here
-
-
-# test it by calling it here, then re-knitting the doc
-
-```
-
-### Exercise (arguments)
-
-Now let's think about arguments. We've got one argument already in our function. Can you update it to add a second argument - `job_title` - so that our function now includes the `user_name`'s job in the greeting? I've included the original `my_fun()` below - feel free to change the name to your preferred version too.
-
-```{r}
-# add a second argument inside the function() - separated by a comma from the existing first argument
-my_fun <- function(user_name) {
-  cat(glue("**Hello {user_name}, welcome to the wonderful world of functions**  \n  \n"))
-}
-
-# test your function with a second argument - remember to update the arguments
-my_fun("Susan")
-```
-
-### Exercise (body)
-
-Finally, let's do something a bit more interesting in the body of our function. Here's a little bit of code that takes a user name and job title, then counts letters and vowels in the user name, then outputs a little message containing the name, job title, and counts of letters and vowels:
-
-```{r eval=F}
-user_name <- c("Albertine D. Marmot")
-job_title <- c("Data analyst")
-name_chars <- nchar(user_name)
-name_vowels <- nchar(gsub("[^aeiou]", "", user_name))
-cat(glue("Hello {user_name} the {job_title}. Welcome to the KIND Learning Network R training session on functions. Through the power of this function, I'm delighted to report that your name has {name_chars} letters, of which {name_vowels} are vowels. Welcome to the wonderful world of functions!  \n  \n"))
-```
-
-In this exercise, you'll:
-
-1. Copy/paste your updated function from the code block in the previous exercise
-2. Rename the function to something more suitable
-3. Update the function using the new code above
-4. Test it by calling it with a couple of different user names
-
-```{r}
-
-# write your updated function here
-
-# test your function below
-
-```
 
 ## Using functions
 We've already been playing around with a simple function. Now that we've spent some time thinking about function syntax, let's have a more detailed look at the parts of our function, and how functions are used. Here's our simple function again:
@@ -270,20 +191,6 @@ range_o_matic <- function() {
 ```
 
 Then we can call `range_o_matic()` in the Rmarkdown when we want to print our range (which goes from `r range_o_matic()[[1]]` to `r as.integer(range_o_matic()[[2]])`). That saves us from putting all that dplyr inline, which helps keep your code clean and organised. And we can now quickly print the range of the admissions variable that we have in our data, which is useful enough. 
-
-### Exercise
-
-Let's now tweak `range_o_matic()`. At the moment this gives us the range of the `admissions` variable. Can you tweak the function so that it gives us the range of the `attendances` variable instead? I'll start you off with the existing code. Make sure that the function has a useful name!
-
-```{r}
-range_o_matic <- function() {
-  ae_attendances %>%
-  pull(admissions) %>%
-  range()
-}
-```
-
-Once you've finished updating the function itself, make sure that you test it!
 
 Okay, so I hope I've show you that even 0-argument functions can be potentially useful. However, being able to add arguments allows us to apply functions to different aspects of our analysis without having to re-write the code each time, as we did above. Ideally, we'd like to be able to apply `range_o_matic()` to *any* variable in *any* data series. We'll start working on that problem in the next section where we'll start adding arguments to our function.
 
@@ -359,28 +266,6 @@ diff_sum <- function(data) {
 
 diff_sum(c(8,4,1,11,7,5,-17,12,-4,2,9,6,3,45,2))
 ```
-
-### Exercise
-
-So, we'll conclude this section on translation with an exercise. Can you build your own function along the lines of `diff_sum`? I'll start you off with some working code:
-
-```{r}
-
-raw_data <- c(3,11,8,4,7,5,2,9,6,3,45,2)    # our numbers
-mean_raw_data <- round(mean(raw_data), 2)   # the mean of all the numbers
-sd_raw_data <- round(sd(raw_data), 2)       # the standard deviation of the numbers
-cat(glue("The mean of our data is {mean_raw_data} and the standard deviation is {sd_raw_data}")) # output
-
-# write your function here
-
-```
-
-A suggestion for approaching this exercise:
-
-1. start with the bare-bones of the function syntax
-2. copy all the code inside the function
-3. review the code, so that instead of `raw_data` being hard-coded, we use an argument to pass the numbers to the function
-4. test your working function with a selection of numbers
 
 ## Indirection
 
@@ -583,14 +468,6 @@ admissions_graph("NLO10")
 admissions_graph("RJ2")
 ```
 
-### Exercise
-
-Try testing the `admissions_graph()` function with some of the other org_codes. Could you generate a list of orgs which will produce graphs (this is a test of your dplyr skills, rather than functions).
-
-```{r}
-
-```
-
 ## Dot dot dot `(...)`
 
 As a final thought, we should introduce `...`. `...` lets you pass many arguments between functions. It's easier to demonstrate this than to explain it comprehensively, so let's start with a simple, two-argument function:
@@ -662,4 +539,3 @@ full_graph <- function(name, org) {
 
 walk2(authors$name, authors$org, full_graph)
 ```
-
