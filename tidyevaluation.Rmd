@@ -22,7 +22,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'asis')
 #install.packages(setdiff("pacman", rownames(installed.packages())))
 library("pacman")
-p_load(purrr, tidyr, ggplot2,dplyr,lubridate, stringr,NHSRdatasets, rlang, glue)
+p_load(purrr, tidyr, ggplot2,dplyr,lubridate, stringr,NHSRdatasets, rlang, glue, knitr)
 
 # function to add new window links
 link<-function(text,url) {
@@ -56,7 +56,7 @@ display <- function(df) {
   else{
     df %>%
     head() %>%
-    knitr::kable()
+    kable()
   }
 }
 
@@ -74,14 +74,20 @@ We'll look at five groups of functions in this section. We'll start with the log
 
 ```{r echo=F}
 tribble(
-~Type, ~Functions,
-"logical operators", "`:`, `!`, `&`, and |",
-"pattern matching", "`starts_with()`, `ends_with()`, `contains()`, `matches()`, `num_range()`",
-"match from a character vector", "`all_of()`, `any_of()`",
-"selection helpers for specific columns", "`everything()`, `last_col()`",
-"selecting with a function", "`where()`"
-) %>% knitr::kable()
-
+  ~ Type,
+  ~ Functions,
+  "logical operators",
+  "`:`, `!`, `&`, and |",
+  "pattern matching",
+  "`starts_with()`, `ends_with()`, `contains()`, `matches()`, `num_range()`",
+  "match from a character vector",
+  "`all_of()`, `any_of()`",
+  "selection helpers for specific columns",
+  "`everything()`, `last_col()`",
+  "selecting with a function",
+  "`where()`"
+) %>%
+  kable()
 ```
 
 We'll use `stranded_data` dataset from the `NHSRdatasets` package for this section.
@@ -91,7 +97,7 @@ stranded_data %>%
   display()
 ```
 
-We're using a little helper function here, `display()`. You can find the code for this in the source - but really it just saves having to write `head() %>% knitr::kable()` every time we want to look at our data.
+We're using a little helper function here, `display()`. You can find the code for this in the source - but really it just saves having to write `head() %>% kable()` every time we want to look at our data.
 
 ### logical operators
 
@@ -541,7 +547,7 @@ tribble(
   "env-variable in a vector", "`.data[[var]]` and `.env[[var]]` **pronouns**", 
   "variables in output", "**injection** with **`:=`**",
   "complex cases", "**quasiquotation** with the injection operator `!!`"
-) %>% knitr::kable()
+) %>% kable()
 
 ```
 
