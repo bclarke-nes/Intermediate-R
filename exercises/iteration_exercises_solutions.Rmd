@@ -1,0 +1,293 @@
+---
+title: "![](../img/header.png) Intermediate R"
+author: "Brendan Clarke"
+date: "2022-10-22"
+always_allow_html: true
+output:
+  html_document: 
+    toc_depth: 2
+    toc_float:
+      collapsed: no
+    fig_width: 6
+    fig_height: 2
+  word_document:
+    toc: yes
+    toc_depth: '2'
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+    pandoc_args: ["--extract-media", "."]
+---
+
+```{r echo=F, warning=F, message=F}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+install.packages(setdiff("pacman", rownames(installed.packages())))
+library("pacman")
+p_load(tidyr, ggplot2, dplyr, NHSRdatasets, glue, microbenchmark)
+
+# function to add new window links
+link<-function(text,url) {
+  target<-c('{target="_blank"}')
+  glue('[{text}]({url}){target}')
+}
+```
+
+# iteration exercises - solutions {.tabset}
+
+## for loops
+Can you make a for loop that counts from 1 to 10, and saves those counts in a vector called `word`?
+
+```{r results='asis'}
+word <- ""
+
+# or, more correctly
+word <- vector("character", 10)
+
+x <- 1:10
+
+for (i in seq_along(x)) {
+  word[[i]] <- i
+}
+
+cat(word)
+```
+
+Can you now reverse the order, so that `word` contains 10,9,8...?
+
+```{r results='asis'}
+word <- ""
+
+# or, more correctly
+word <- vector("character", 10)
+
+x <- 1:10
+
+for (i in seq_along(x)) {
+  word[[11-i]] <- i
+}
+
+# or
+
+for (i in seq_along(x)) {
+  word[[i]] <- 11-i
+}
+
+cat(word)
+```
+
+Finally, can you use the `glue()` function so that this function prints "10 green bottles, 9 green bottles..."?
+
+```{r results='asis'}
+# write your code below
+
+for(i in 10:1) {
+  cat(glue("{i} green bottles  \n"))
+}
+
+```
+
+
+## microbenchmark/vectorising
+This exercise gives you a chance to practice using `microbenchmark()`, and reminds you of the three ways of vectorising a function. Let's begin with a scalar function:
+
+```{r}
+odd_chr <- function(string){
+  if(nchar(string) %% 2 != 0) {
+    "Odd"
+  } else {
+    "Even"
+  }
+}
+
+odd_chr("Thing")
+odd_chr("Things")
+
+gazelles <- c("Gazella dorcas", "Gazella subgutturosa", "Gazella bennettii", "Gazella cuvieri", "Gazella gazella", "Gazella leptoceros", "Gazella saudiya", "Gazella spekei", "Gazella erlangeri", "Gazella arabica", "Gazella dorcas x leptoceros", "Gazella sp.")
+
+try(odd_chr(gazelles))
+```
+Now try using `Vectorize()` to create a new function, `odd_chr_v()` that is vectorised:
+
+```{r}
+odd_chr_v <- Vectorize(odd_chr)
+odd_chr_v(gazelles)
+
+```
+
+Next, re-write the function to use `ifelse()` rather than an `if()` / `else()`. Call your new function `odd_chr_r()`:
+
+```{r}
+odd_chr_r <- function(string){
+  
+  ifelse(nchar(string) %% 2 != 0, "Odd", "Even")
+}
+
+odd_chr_r(gazelles)
+
+```
+
+
+Finally, write a loop to iterate over `gazelles` using `odd_chr()`:
+
+```{r}
+out <- vector("character", length = length(gazelles))
+
+for (i in 1:length(gazelles)) {
+  out[i] <- odd_chr(gazelles[i])
+  }
+
+out
+
+```
+Now you should have three pieces of code to evaluate. We can now write a skeleton `microbenchmark()`. Add a `microbenchmark()`, add three sections with some placeholder code like `a = sum(1:1000)`, asign the output to a suitable variable name (like `mbm`). Finally, `autoplot()` your variable name to show the violin plot of execution time:
+
+```{r}
+mbm <- microbenchmark(
+  a = sum(1:1000),
+  b = sum(1:1000),
+  c =sum(1:1000)
+)
+autoplot(mbm)
+
+```
+
+(note that you may get odd results if you use extremely simple code as your placeholder because microbenchmark struggles to be accurate with the really quick stuff)
+
+Once you've got your simple `microbenchmark()` running, you can substitute in the three vectorised versions of `odd_chr()` from above:
+
+```{r}
+mbm <- microbenchmark(Vectorize = odd_chr_v(gazelles),
+                      ifelse = odd_chr_r(gazelles),
+                      loop = {
+                        out <- vector("character", length = length(gazelles))
+                        
+                        for (i in 1:length(gazelles)) {
+                          out[i] <- odd_chr(gazelles[i])
+                        }
+                      })
+autoplot(mbm)
+```
+
+## while loops
+
+Can you use a `while` loop to produce the full lyrics of 10 green bottles? Bonus points if you can update the final iteration to `r link("fit the lyric 'no green bottles'", "https://en.wikipedia.org/wiki/Ten_Green_Bottles")`:
+
+```{r results='asis'}
+bottles <- 10
+while (bottles > 0) {
+  if (bottles > 2) {
+    cat(
+      paste(
+        bottles,
+        "green bottles, hanging on the wall.",
+        bottles,
+        "green bottles, hanging on the wall. And if 1 green bottle should accidentally fall, there'll be",
+        bottles - 1,
+        "green bottles hanging on the wall.  \n"
+      )
+    )
+    
+    bottles <- bottles - 1
+  } else if (bottles == 2) {
+    cat(
+      paste(
+        bottles,
+        "green bottles, hanging on the wall.",
+        bottles,
+        "green bottles, hanging on the wall. And if 1 green bottle should accidentally fall, there'll be",
+        bottles - 1,
+        "green bottle hanging on the wall.  \n"
+      )
+    )
+    
+    bottles <- bottles - 1
+  } else {
+    cat(
+      paste(
+        bottles,
+        "green bottle, hanging on the wall.",
+        bottles,
+        "green bottle, hanging on the wall. And if 1 green bottle should accidentally fall, there'll be no green bottles hanging on the wall."
+      )
+    )
+    
+    bottles <- bottles - 1
+  }
+}
+```
+
+## Rmarkdown with loops
+
+We're going to update the example in this exercise. We want to make the following changes:
+
++ instead of a random sample of org_codes, we want to look at all the orgs where attendances is greater than 800000
++ ...and let's rank our orgs in terms of their total attendances, and use that ranking as the sequence for our loop
++ We'll also display rankings in the explanatory text
++ instead of plotting the total attendance on a histogram, we want to look at the three types of attendance separately
++ we want to be a bit more ambitious with our table. Can we update the table so that we get a percentage rate for each of the types of admission?
+
+This is a bit like assembling a jigsaw. The working code 'pieces' are already in the chunk below, and we'll work through assembling them into a working loop.
+
+<!-- optional, to put each section into its own tab -->
+### {.tabset} 
+
+```{r fig.height=1.5, fig.width=4, results='asis'}
+# produce some ranked data
+org_data <- ae_attendances %>%
+  group_by(org_code) %>%
+  summarise(attendances = sum(attendances)) %>%
+  filter(attendances > 800000) %>%
+  mutate(rank = rank(desc(attendances))) %>%
+  arrange(rank) 
+
+# pull the org codes from that ranked data for our sequence
+orgs <- org_data %>%
+  pull(org_code)
+
+# build a loop over those orgs 
+for(i in 1:length(orgs)) {
+  
+  # subset the data for the org for that iteration
+  one_org <- ae_attendances %>%
+      group_by(org_code, type) %>%
+      summarise(attendances = sum(attendances)) %>%
+      filter(org_code == orgs[i])
+  
+  # produce a header
+  cat("  \n")
+  cat(glue("  \n#### Details for {orgs[i]}"))
+  cat("  \n")
+  
+  # add some explanatory text
+  cat("  \n")
+  cat(glue("{orgs[i]} was ranked {i} for total attendances"))
+  cat("  \n")
+  
+  # add a table
+  cat("  \n")
+  print(one_org %>%
+    mutate(
+      attendances = glue(
+        "{attendances} ({100*(round(attendances / sum(attendances), 3))}% of org total)"
+      )
+    ) %>%
+    knitr::kable())
+  cat("  \n")
+  
+  # add the graph
+  cat("  \n")
+  print(ae_attendances %>%
+      group_by(org_code, type) %>%
+      summarise(attendances = sum(attendances)) %>%
+      ggplot() +
+      geom_histogram(aes(x=attendances, fill=type), bins=10) +
+      geom_vline(data = one_org, aes(xintercept=attendances), color=c("#000099")) +
+      facet_wrap(~type) +
+      xlab("Total admissions") +
+      ylab("n orgs") +
+      theme(legend.position="none", axis.text.x = element_blank(), axis.ticks.x = element_blank()))
+  cat("  \n")
+  }
+```
+
+

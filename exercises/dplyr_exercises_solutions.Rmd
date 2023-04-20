@@ -27,7 +27,7 @@ library("pacman")
 p_load(dplyr,lubridate,stringr,NHSRdatasets, glue, tidyr, purrr, knitr, ggplot2)
 ```
 
-# dplyr exercises {.tabset}
+# dplyr exercises - solutions {.tabset}
 
 ## `slice()`
 Use `slice` on the ons_mortality data to:

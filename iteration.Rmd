@@ -19,11 +19,11 @@ output:
     pandoc_args: ["--extract-media", "."]
 ---
 
-```{r echo=F}
+```{r echo=F, warning=F, message=F}
 knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
 install.packages(setdiff("pacman", rownames(installed.packages())))
 library("pacman")
-p_load(tidyr,readr,DiagrammeR,ggplot2,dplyr,lubridate,NHSRplotthedots,readxl,stringr,NHSRdatasets, purrr, rlang,glue)
+p_load(tidyr, ggplot2, dplyr, NHSRdatasets, glue, microbenchmark)
 
 # function to add new window links
 link<-function(text,url) {
@@ -41,7 +41,6 @@ for (i in seq_along(1:10)) {
 }
 ```
 
-
 While for-loops are a basic building-block of many programming languages, they are found infrequently in R. There are a couple of good reasons for this. First, for-loops can be very slow in R, and writing high-performance code has a perennial appeal that surpasses its actual importance in day-to-day data analysis. Second, most functions in R are vectorised. Vectorised functions, as We'll explain later, usually allow us to avoid writing for-loops.
 
 However, imperative programming using for-loops definitely has a place, even if a purist might avoid them for performance reasons. Computer time is cheaper than analyst time, and loops definitely have some strengths in real-world analysis. One important strength of for-loops is that they allow you to repeatedly apply a non-vectorised function elegantly. As some of the core Rmarkdown functions are not vectorised, for-loops are an important part of the Rmarkdown programmer's toolkit. So this training will give you a basic introduction to writing good loops in R, and we'll cover some strategies for avoiding the worst of the performance hit that iteration can cause.
@@ -57,9 +56,19 @@ This iteration training can be taken as a stand-alone session, or integrated int
 
 ## Introduction
 
+### Ground rules
+
+Some ground rules for this training session:
+
+1. The training is **interactive**. You'll be working on code, answering questions, and helping other trainees. Do please ask questions whenever you like, or for extra clarification if anything isn't as clear as you'd like it to be. 
+
+2. Please leave **cameras and mics on** as much as you reasonably can. Social learning is a vital part of this training, and the more discussion and chat that we get, the better the sessions run.
+
+3. Things will go wrong, and code will misbehave. **Be ready to share your screen when this happens.** The aim is that we will all collaborate on solving any problems that we might run into. This is the best way of developing a set of strategies for solving problems which is such an important part of the learning journey in this field.
+
 Once again, this training is influenced by the explanations and code from `r link("R4DS", "https://r4ds.had.co.nz/iteration.html#for-loops")`. It's impossible to recommend this book as a resource too strongly, and a quick read of the iteration chapter will be a useful adjunct to this session.
 
-There's a bit more base R in this session than most of the KIND Learning Network training. We'll explain anything new that crops up, and most of the base R code is pretty straightforward. Some useful examples that we'll include here are the base R ways of selecting from tibbles. For some tibble called `df`:
+Loops are base R structures, which means that there's a bit more base R in this session than most of the KIND Learning Network training. We'll explain anything new that crops up, and most of the base R code is pretty straightforward. Some useful examples that we'll include here are the base R ways of selecting from tibbles. For some tibble called `df`:
 
 + `df[[]]`
   + `df[["val"]]` selects the column named `val` 
@@ -144,41 +153,6 @@ words %>%
   knitr::kable()
 ```
 
-### Exercises
-
-Let's take that first loop, and tweak it. Can you make the loop count from 1 to 10, so that `word` contains 1,2,3...? I've started you off with the original code:
-
-```{r results='asis'}
-word <- ""
-
-x <- 1:10
-
-for (i in seq_along(x)) {
-  word[[i]] <- "iteration is"
-}
-
-cat(word)
-```
-
-
-```{r results='asis'}
-# write your code below
-```
-
-Can you now reverse the order, so that `word` contains 10,9,8...?
-
-```{r results='asis'}
-# write your code below
-
-```
-
-Finally, can you use the `glue()` function so that this function prints the lyrics of "Ten Green Bottles"?
-
-```{r results='asis'}
-# write your code below
-
-```
-
 ## Output
 
 One reason that many R programmers will avoid writing loops concerns performance. And there are some good reasons that loops in R are rather slower than some of the alternative ways of working. I think the first piece of useful advice here is that performance should be fairly low down on your list of concerns as someone working in R. Computer time is cheap - much cheaper than your time spent optimising performance. Exceptions obviously apply, particularly if you're writing code that will be widely and repeatedly used. That said, there are some quick and easy ways of speeding up code with loops if you need to. The most important lesson here is:
@@ -188,8 +162,6 @@ One reason that many R programmers will avoid writing loops concerns performance
 In this section, we'll also look at benchmarking using `microbenchmark()` as a way of assessing performance. Let's have a very quick look at that now, and then we'll use the same syntax to compare a couple of approaches to building output in loops.
 
 ```{r}
-library(microbenchmark)
-
 mbm <- microbenchmark(multiplication={2*2*2}, addition = {2+2+2+2}, power = 2^3)
 autoplot(mbm)
 
@@ -335,15 +307,6 @@ bottles = bottles - 1
 }
 ```
 
-### Exercise
-
-Can you finish off the 10 green bottles loop above? Bonus points if you can update the final iteration to `r link("fit the lyric 'no green bottles'", "https://en.wikipedia.org/wiki/Ten_Green_Bottles")`:
-
-```{r}
-
-```
-
-
 ## Vectorised functions
 
 Most functions in R are vectorised. That means that:
@@ -472,6 +435,72 @@ glimpse(output[1,])
 
 ```
 
+## Breaks and next
+
+### `break`
+When encountered, `break` completely stops the execution of the loop. For example, say we have some random numbers:
+```{r}
+
+random_sample <- sample(seq(from=1, to=340, by=sample(1:10, 1, replace=T)), 10)
+
+```
+Say we want to loop through some `random_numbers` and do something until we get to a number larger than a threshold value:
+
+```{r}
+threshold_value <- 300
+```
+
+We can use a `break`, which will stop the loop when an `if()` condition is met:
+
+```{r}
+for(i in random_sample) {
+  cat(glue("{i  }, "))
+}
+
+for(i in random_sample) {
+  if(i > threshold_value) break
+  cat(glue("{i  }, "))
+}
+
+
+```
+If you're using nested loops, and a `break` is encountered in the inner loop, it will return you to the outer loop (or the next level up):
+
+```{r}
+for(i in 1:5) {
+  for (j in 1:5) {
+  cat(glue("{i+j} "))
+    if(i+ j >= 7) break # breaks the inner loop at 7 each time
+  }
+      cat("  \n")
+}
+```
+
+
+### `next`
+When encountered, `next` moves on to the next iteration of the loop. It's usual to combine it with a test condition (using an `if()` statement). For example, we could use `next` to write a simple [fizz buzz](https://en.wikipedia.org/wiki/Fizz_buzz) programme:
+
+```{r}
+
+for(i in 1:20) {
+  if(i %% 15 == 0) {
+    cat("fizzbuzz, ")
+    next
+  }
+  if(i %% 3 == 0) {
+    cat("fizz, ")
+    next
+  }
+  if(i %% 5 == 0) {
+    cat("buzz, ")
+    next
+  }
+cat(glue("{i}, "))
+}
+
+
+```
+
 ## Rmarkdown with loops {.tabset}
 
 ### Introduction
@@ -523,7 +552,9 @@ for (i in seq_along(orgs_seq)) {
             pull()
     
     # customised 4th level header containing org_code
+    cat("  \n")
     cat(glue("  \n  \n#### {orgs_seq[i]} attendances  \n  \n"))
+    cat("  \n")
     
     # customised explanatory text
     cat(glue("Some explanatory text: {orgs_seq[i]} had a total of {org_total_admissions} admissions.  \n"))
@@ -560,44 +591,3 @@ for (i in seq_along(orgs_seq)) {
 ```{r, loop-ex, eval=F}
 ```
 
-### Exercise
-
-We're going to update the example in this exercise. We want to make the following changes:
-
-+ instead of a random sample of org_codes, we want to look at all the orgs where attendances is greater than 800000
-+ ...and let's rank our orgs in terms of their total attendances, and use that ranking as the sequence for our loop
-+ We'll also display rankings in the explanatory text
-+ instead of plotting the total attendance on a histogram, we want to look at the three types of attendance separately
-+ we want to be a bit more ambitious with our table. Can we update the table so that we get a percentage rate for each of the types of admission?
-
-This is a bit like assembling a jigsaw. The working code 'pieces' are already in the chunk below, and we'll work through assembling them into a working loop.
-
-```{r fig.height=1.5, fig.width=4, results='asis'}
-orgs <- ae_attendances %>%
-  group_by(org_code) %>%
-  summarise(attendances = sum(attendances)) %>%
-  filter(attendances > 800000) %>%
-  mutate(rank = rank(desc(attendances))) %>%
-  arrange(rank) %>%
-  pull(org_code)
-
-one_org <- ae_attendances %>%
-      group_by(org_code, type) %>%
-      summarise(attendances = sum(attendances)) %>%
-      filter(org_code == "RAS")
-
-one_org %>%
-  mutate(attendances = glue("{attendances} ({100*(round(attendances / sum(attendances), 3))}% of total)")) %>%
-  knitr::kable()
-
-ae_attendances %>%
-      group_by(org_code, type) %>%
-      summarise(attendances = sum(attendances)) %>%
-      ggplot() +
-      geom_histogram(aes(x=attendances, fill=type), bins=10) +
-      geom_vline(data = one_org, aes(xintercept=attendances), color=c("#000099")) +
-      facet_wrap(~type) +
-      xlab("Total admissions") +
-      ylab("n orgs") +
-      theme(legend.position="none", axis.text.x = element_blank(), axis.ticks.x = element_blank())
-```
