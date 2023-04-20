@@ -262,7 +262,7 @@ map_dbl(short_org_codes, non_admissions_v)
 
 If our function returns a character vector we can use `map_chr()`:
 
-```{r results='markup}
+```{r results='markup'}
 non_admissions_c <- function(...) {
   non_admissions_v(...) %>%
     as.character()

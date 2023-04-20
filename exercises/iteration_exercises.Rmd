@@ -32,7 +32,7 @@ link<-function(text,url) {
 }
 ```
 
-# iteration exercises - solutions {.tabset}
+# iteration exercises {.tabset}
 
 ## for loops
 Can you make a for loop that counts from 1 to 10, and saves those counts in a vector called `word`?
