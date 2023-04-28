@@ -20,7 +20,7 @@ output:
 
 ```{r echo=F, warning=F, message=F}
 knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, results = 'asis')
-#install.packages(setdiff("pacman", rownames(installed.packages())))
+install.packages(setdiff("pacman", rownames(installed.packages())))
 library("pacman")
 p_load(purrr, tidyr, ggplot2,dplyr,lubridate, stringr,NHSRdatasets, rlang, glue, knitr)
 
@@ -181,7 +181,7 @@ stranded_data %>%
 You can use the `ignore.case` argument to change this behaviour:
 
 ```{r}
-plart <- stranded_data %>%
+stranded_data %>%
   select(starts_with("Care", ignore.case = FALSE))  %>%
   display()
 ```

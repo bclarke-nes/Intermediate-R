@@ -656,8 +656,6 @@ To demonstrate how joins work in dplyr, we need to start with some suitable data
 We'll set up some extremely simple data using `tribble()` to demonstrate how the joins work:
 
 ```{r}
-
-# Ideally change to x and y to fit pictures
 simple_a <- tribble(
   ~category, ~value, ~key,
   "a",5,3,
