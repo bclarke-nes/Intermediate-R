@@ -184,16 +184,27 @@ The `slice_min()` and `slice_max()` functions are also useful, giving you someth
 
 ```{r}
 ae_attendances %>%
-  slice_max(breaches, n=6) %>%
+  filter(type == "1") %>%
+  slice_max(breaches, n=1) %>%
   kable()
 
 # equivalent to
 ae_attendances %>%
   arrange(desc(breaches)) %>%
-  slice(1:6) %>%
-  knitr::kable()
+  slice(1) %>%
+  kable()
 ```
 (note that you need to explicitly name the number of rows you want using `n=...`)
+
+`slice_min()` and `slice_max()` are particularly useful for groups:
+
+```{r}
+ae_attendances %>%
+  filter(type == "1") %>%
+  group_by(org_code) %>%
+  slice_max(breaches, n=1) %>%
+  display()
+```
 
 `slice_sample()` gives a random sampling of the data.
 ```{r}
@@ -266,7 +277,7 @@ LOS_model %>%
   rename_with(tolower) %>%
   display()
 ```
-`rename()` works well with tidyselect operators, which we'll cover briefly during this session. We also have a stand-alone session on [tidy evaluation](https://dplyr.tidyverse.org/articles/programming.html), which covers this territory in more depth.
+`rename()` works well with tidyselect operators, especially `last_col()`, which we'll cover briefly during this session. We also have a stand-alone session on [tidy evaluation](https://dplyr.tidyverse.org/articles/programming.html), which covers this territory in more depth.
 
 ### `relocate()`
 
@@ -354,6 +365,34 @@ stranded_data %>%
   display()
 ```
 
+`starts_with()` and `ends_with()` work in exactly the same way - but will only match strings at the beginning and end of the column name respectively:
+
+```{r}
+stranded_data %>%
+  select(starts_with("care")) %>%
+  display()
+
+stranded_data %>%
+  select(ends_with("care")) %>%
+  display()
+```
+
+
+`matches()` allows use of a [regular expression](https://regex101.com/):
+
+```{r}
+stranded_data %>%
+  select(matches("me[dn]")) %>%
+  display()
+```
+
+`num_range()` matches columns with numeric ranges. For example, in the [billboard](https://cran.r-project.org/web/packages/billboard/billboard.pdf) dataset, there are a large number of columns named `wk1`, `wk2`... representing weeks. To select `wk10` to `wk15`:
+
+```{r}
+billboard %>% 
+  select(num_range("wk", 10:15)) %>%
+  display()
+```
 
 ### `any_of()`
 
@@ -656,60 +695,60 @@ To demonstrate how joins work in dplyr, we need to start with some suitable data
 We'll set up some extremely simple data using `tribble()` to demonstrate how the joins work:
 
 ```{r}
-simple_a <- tribble(
+simple_x <- tribble(
   ~category, ~value, ~key,
-  "a",5,3,
-  "a",2,7,
-  "a",4,2,
-  "a",7,1,
-  "a",9,1
+  "x",5,3,
+  "x",2,7,
+  "x",4,2,
+  "x",7,1,
+  "x",9,1
   )
 
-knitr::kable(simple_a)
+kable(simple_x)
 
-simple_b <- tribble(
+simple_y <- tribble(
   ~category, ~value, ~key,
-  "b",2,5,
-  "b",7,2,
-  "b",3,2,
-  "b",2,8,
-  "b",2,14
+  "y",2,5,
+  "y",7,2,
+  "y",3,2,
+  "y",2,8,
+  "y",2,14
   )
 
-knitr::kable(simple_b)
+kable(simple_y)
 ```
 
 #### `bind_rows()`
 
 `bind_rows()` does exactly what the name describes. It adds the rows of one tibble to another, resulting in one joined tibble containing all the rows:
 ```{r}
-simple_a %>%
-  bind_rows(simple_b) %>%
-  knitr::kable()
+simple_x %>%
+  bind_rows(simple_y) %>%
+  kable()
 ```
 
 `bind_rows()` will create new columns and fill with NAs if the names of the columns don't match:
 
 ```{r}
-simple_a %>%
+simple_x %>%
   rename("wrong_name" = "value") %>%
-  bind_rows(simple_b) %>%
-  knitr::kable()
+  bind_rows(simple_y) %>%
+  kable()
 ```
 
 And you can create an optional ID column to show where each row originated, which is helpful for debugging:
 
 ```{r}
-simple_a %>%
-  bind_rows(simple_b, .id="ID") %>%
-  knitr::kable()
+simple_x %>%
+  bind_rows(simple_y, .id="ID") %>%
+  kable()
 ```
 
 You can also `bind_rows()` by list:
 
 ```{r}
-bind_rows(list(simple_a, simple_b)) %>%
-  knitr::kable()
+bind_rows(list(simple_x, simple_y)) %>%
+  kable()
 ```
 
 #### bind_cols()
@@ -717,9 +756,9 @@ bind_rows(list(simple_a, simple_b)) %>%
 Another function, another descriptive name. `bind_cols()` adds columns to the starting tibble, but otherwise works as `bind_rows()`:
 
 ```{r}
-simple_a %>%
-  bind_cols(simple_b, .name_repair="universal") %>%
-  knitr::kable()
+simple_x %>%
+  bind_cols(simple_y, .name_repair="universal") %>%
+  kable()
 ```
 
 ### Mutating joins {.tabset}
@@ -749,9 +788,9 @@ knitr::include_graphics("img/inner.png")
 `inner_join()` joins two tibbles by whichever key column you supply using `by=`:
 
 ```{r}
-simple_a %>%
-  inner_join(simple_b, by="key") %>%
-  display()
+simple_x %>%
+  inner_join(simple_y, by="key") %>%
+  kable()
 ```
 
 This returns all the rows that exist in both tibbles.
@@ -765,12 +804,12 @@ knitr::include_graphics("img/left.png")
 `left_join()` includes all the rows in the first tibble:
 
 ```{r}
-simple_a %>%
-  left_join(simple_b, by="key", suffix = c(".a", ".b")) %>%
-  display()
+simple_x %>%
+  left_join(simple_y, by="key", suffix = c(".a", ".b")) %>%
+  kable()
 ```
 
-We get returned the rows that exist in simple_a, and any that match keys from simple_b. Any 'extra' rows in simple_a are filled in with `NAs`. We've also tweaked the column names in this example, using the `suffix` argument.
+We get returned the rows that exist in `simple_x`, and any that match keys from `simple_y`. Any 'extra' rows in simple_a are filled in with `NAs`. We've also tweaked the column names in this example, using the `suffix` argument.
 
 #### `right_join()`
 
@@ -781,12 +820,12 @@ knitr::include_graphics("img/right.png")
 `right_join()` includes all the rows in the second tibble:
 
 ```{r}
-simple_a %>%
-  right_join(simple_b, by="key", keep=T) %>%
-  display()
+simple_x %>%
+  right_join(simple_y, by="key", keep=T) %>%
+  kable()
 ```
 
-We get all the rows that exist in simple_b, and any that match keys from simple_b, again, filling with NAs where appropriate. Here, we're demonstrating the `keep` argument, which will repeat the column on which we're joining for each of the tibbles.
+We get all the rows that exist in `simple_y`, and any that match keys from `simple_a`, again, filling with NAs where appropriate. Here, we're demonstrating the `keep` argument, which will repeat the column on which we're joining for each of the tibbles.
 
 #### `full_join()`
 
@@ -797,9 +836,9 @@ knitr::include_graphics("img/full.png")
 `full_join()` gives us all the rows from all the tibbles:
 
 ```{r}
-simple_a %>%
-  full_join(simple_b, by="key") %>%
-  display()
+simple_x %>%
+  full_join(simple_y, by="key") %>%
+  kable()
 ```
 
 All rows in both tibbles, filling with `NAs` where needed.
@@ -813,9 +852,9 @@ knitr::include_graphics("img/anti.png")
 Anti-join is a bit of an outlier, because it returns a smaller tibble than it is supplied with. It returns all the rows of our first tibble that are not present in the second tibble:
 
 ```{r}
-simple_a %>%
-  anti_join(simple_b, by="key") %>%
-  display()
+simple_x %>%
+  anti_join(simple_y, by="key") %>%
+  kable()
 ```
 
-Only those rows in simple_a that are not present in simple_b.
+Only those rows in `simple_x` that are not present in `simple_y`.
